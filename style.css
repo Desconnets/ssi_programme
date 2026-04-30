@@ -1,0 +1,1090 @@
+/* ===== Plein écran – animation uniquement, 16:9 ===== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Comic Sans MS", "Trebuchet MS", Tahoma, sans-serif;
+  background: #0d0d14;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+/* Pendant le fetch des listes API (premier chargement) : pas de clic play sur playlist encore vide */
+html.ssi-app-init-pending .mini-controls-hud .mini-controls {
+  pointer-events: none;
+  opacity: 0.45;
+  cursor: wait;
+}
+
+html.ssi-app-init-pending #startHint {
+  cursor: wait;
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a12;
+}
+
+/* Scène 16:9 plein écran (remplit la hauteur ou la largeur) */
+.scene {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  max-width: 177.78vh;   /* 16/9 * 100vh */
+  max-height: 56.25vw;   /* 9/16 * 100vw */
+  overflow: hidden;
+}
+
+/* ----- Mini-contrôles audio (bas droite) — masqués par défaut, dev : survol zone + 2 s après sortie ----- */
+.mini-controls-hud {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  padding: 12px 20px 20px 48px;
+  z-index: 65;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  /* Zone invisible pour réactiver le lecteur sans viser les boutons */
+  min-width: 140px;
+  min-height: 72px;
+}
+
+.mini-controls-hud .mini-controls {
+  position: relative;
+  right: auto;
+  bottom: auto;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.mini-controls-hud.is-visible .mini-controls {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Mode micro (choix au lancement Python) : pas de lecteur playlist, garde le plein écran */
+body.ssi-micro-audio #btnPrev,
+body.ssi-micro-audio #btnPlayPause,
+body.ssi-micro-audio #btnNext {
+  display: none !important;
+}
+
+.mini-controls {
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(5, 5, 15, 0.7);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.25);
+  backdrop-filter: blur(8px);
+  align-items: center;
+  justify-content: center;
+}
+
+.mini-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: rgba(255,255,255,0.12);
+  color: #f5f5ff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+  opacity: 0.78;
+}
+
+.mini-btn:hover {
+  background: rgba(255,255,255,0.26);
+  transform: translateY(-1px);
+  opacity: 1;
+}
+
+.mini-btn:active {
+  transform: translateY(0);
+  background: rgba(255,255,255,0.4);
+}
+
+.mini-btn-small {
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+}
+
+/* ----- Fond animé Y2K ----- */
+.background {
+  position: absolute;
+  inset: 0;
+}
+
+.bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.1) contrast(1.08) brightness(0.9);
+  opacity: 1;
+  transition: opacity 0.52s ease;
+}
+
+.bg-gradient {
+  position: absolute;
+  inset: -50%;
+  background-size: 400% 400%;
+  animation: gradientShift 12s ease infinite;
+  opacity: 0.65;
+  transition: opacity 0.35s ease, background 12s ease-in-out;
+}
+
+/* Thème sombre – basé sur ultra violet + turquoise */
+.bg-gradient[data-theme="dark"] {
+  background: linear-gradient(
+    125deg,
+    #050216 0%,
+    #12042a 18%,
+    #6b00dd 38%,
+    #02d1ae 64%,
+    #04121a 82%,
+    #02010b 100%
+  );
+}
+
+/* Thème clair – teinte plus lumineuse dans la palette SSI */
+.bg-gradient[data-theme="light"] {
+  background: linear-gradient(
+    125deg,
+    #ff309c 0%,
+    #ff63b7 18%,
+    #ffde01 38%,
+    #b5f3df 60%,
+    #6b00dd 82%,
+    #3c016d 100%
+  );
+}
+
+/* Thème intermédiaire – mix équilibré des 4 couleurs SSI */
+.bg-gradient[data-theme="mid"] {
+  background: linear-gradient(
+    125deg,
+    #02010f 0%,
+    #261050 16%,
+    #6b00dd 34%,
+    #02d1ae 56%,
+    #ffde01 78%,
+    #ff309c 100%
+  );
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+
+/* ----- Stickers ----- */
+.stickers-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.stickers-layer .sticker {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  max-width: 22%;
+  max-height: 22%;
+  object-fit: contain;
+  will-change: transform;
+  transition: opacity 0.6s ease;
+}
+
+/* ----- Phase « fausse fenêtre OS » SSI + vidéo (au-dessus de tout, tremblement = JS sur .ssi-os-window-shaker) ----- */
+.ssi-os-window-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+.ssi-os-window-layer[hidden] {
+  display: none !important;
+}
+
+/* Fenêtre OS visible pendant le chargement réseau / décodage (gros .mov, moov en fin de fichier, etc.) */
+.ssi-os-window-layer--buffering .ssi-os-window {
+  opacity: 0.88;
+  transform: scale(0.92) translateY(10px);
+  filter: brightness(0.78);
+}
+
+.ssi-os-window-layer--buffering:not(.ssi-os-window-layer--open) .ssi-os-title::after {
+  content: ' — chargement…';
+  font-size: 0.62em;
+  font-weight: 500;
+  opacity: 0.9;
+}
+
+.ssi-os-window-layer--buffering:not(.ssi-os-window-layer--open) .ssi-os-video-shell {
+  min-width: min(72vw, 420px);
+  min-height: 200px;
+  background: #04040a;
+}
+
+/* Préchargement silencieux des vidéos phase_videos (même URL que la 1ʳᵉ lecture) */
+#ssiPhaseVideoPrefetch,
+.ssi-phase-video-prefetch {
+  position: fixed;
+  width: 2px;
+  height: 2px;
+  left: -24px;
+  top: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.ssi-os-window-shaker {
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+}
+
+.ssi-os-window {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 10px;
+  border: 2px solid rgba(2, 209, 174, 0.55);
+  background: linear-gradient(155deg, rgba(38, 16, 80, 0.97) 0%, rgba(2, 1, 15, 0.99) 100%);
+  box-shadow:
+    0 0 0 1px rgba(107, 0, 221, 0.55),
+    0 22px 56px rgba(0, 0, 0, 0.72),
+    0 0 48px rgba(255, 48, 156, 0.2);
+  opacity: 0;
+  transform: scale(0.82) translateY(28px);
+  filter: brightness(0.92);
+  transition:
+    opacity 0.52s cubic-bezier(0.22, 1, 0.32, 1),
+    transform 0.52s cubic-bezier(0.34, 1.2, 0.32, 1),
+    filter 0.45s ease;
+}
+
+.ssi-os-window-layer--open .ssi-os-window {
+  opacity: 1;
+  transform: scale(1) translateY(0);
+  filter: brightness(1);
+}
+
+.ssi-os-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 36px;
+  padding: 6px 12px 6px 10px;
+  background: linear-gradient(180deg, #5c24b8 0%, #261050 52%, #0f0622 100%);
+  border-bottom: 1px solid rgba(2, 209, 174, 0.4);
+}
+
+.ssi-os-traffic {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
+.ssi-os-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  box-shadow: inset 0 -1px 2px rgba(0, 0, 0, 0.4);
+}
+
+.ssi-os-dot--r {
+  background: radial-gradient(circle at 32% 32%, #ff7a88, #b01d2e);
+}
+
+.ssi-os-dot--y {
+  background: radial-gradient(circle at 32% 32%, #ffe89a, #b8941a);
+}
+
+.ssi-os-dot--g {
+  background: radial-gradient(circle at 32% 32%, #7cf5d4, #028f6c);
+}
+
+.ssi-os-title {
+  flex: 1;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: rgba(232, 230, 255, 0.92);
+  text-shadow: 0 0 14px rgba(2, 209, 174, 0.4);
+}
+
+.ssi-os-video-shell {
+  flex: 0 0 auto;
+  background: #030308;
+  line-height: 0;
+}
+
+/* Fenêtre OS uniquement : overlay + glitch tant que la vidéo n’a pas démarré (voir phases.js) */
+#ssiOsWindowLayer .ssi-os-video-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.ssi-os-no-signal-overlay {
+  display: none;
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+/* ===== Effet « aucun signal / vieille TV » — visible tant que `playing` n'a pas été reçu ===== */
+
+/* Vidéo : rendue presque noire sous l'overlay — on ne doit rien voir */
+#ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait .ssi-os-video {
+  filter: brightness(0.04) saturate(0);
+  transition: filter 0.35s ease-out;
+}
+
+/* Overlay principal : fond gris TV avec neige animée (couvre totalement la vidéo) */
+#ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait .ssi-os-no-signal-overlay {
+  display: block;
+  mix-blend-mode: normal;
+  background-color: #1c1c1c;
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(0, 0, 0, 0.22) 0px, rgba(0, 0, 0, 0.22) 1px,
+      transparent 1px, transparent 3px
+    ),
+    repeating-linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.06) 0px, rgba(255, 255, 255, 0.06) 1px,
+      transparent 1px, transparent 4px
+    ),
+    repeating-linear-gradient(
+      47deg,
+      rgba(255, 255, 255, 0.05) 0px, rgba(255, 255, 255, 0.05) 1px,
+      transparent 1px, transparent 6px
+    ),
+    repeating-linear-gradient(
+      133deg,
+      rgba(0, 0, 0, 0.09) 0px, rgba(0, 0, 0, 0.09) 1px,
+      transparent 1px, transparent 7px
+    );
+  animation: ssi-static-flicker 0.06s steps(1) infinite;
+}
+
+/* Bande lumineuse qui défile vers le bas (perte de sync horizontale CRT) */
+#ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait .ssi-os-no-signal-overlay::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 90px;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.07) 25%,
+    rgba(220, 255, 245, 0.22) 50%,
+    rgba(255, 255, 255, 0.07) 75%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+  animation: ssi-scan-roll 2.2s linear infinite;
+}
+
+/* Texte « NO SIGNAL » centré */
+#ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait .ssi-os-no-signal-overlay::after {
+  content: 'NO SIGNAL';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  white-space: nowrap;
+  font-family: "Courier New", Courier, monospace;
+  font-size: clamp(0.8rem, 3vw, 1.3rem);
+  font-weight: 700;
+  letter-spacing: 0.28em;
+  color: rgba(210, 255, 235, 0.7);
+  text-shadow:
+    0 0 8px rgba(2, 209, 174, 0.9),
+    0 0 24px rgba(2, 209, 174, 0.5),
+    0 0 50px rgba(2, 209, 174, 0.2);
+  animation: ssi-nosignal-blink 1.1s steps(1) infinite;
+}
+
+@keyframes ssi-static-flicker {
+  0%   { background-position: 0 0, 0 0, 0 0, 0 0;              opacity: 0.92; }
+  10%  { background-position: -2px 3px, 1px -1px, 3px 2px, -1px 2px;  opacity: 1; }
+  20%  { background-position: 3px -2px, -2px 2px, -1px 4px, 2px -1px; opacity: 0.82; }
+  30%  { background-position: -1px 1px, 4px -3px, 2px -2px, -3px 1px; opacity: 0.96; }
+  40%  { background-position: 2px 4px, -1px 2px, -4px 3px, 1px -3px;  opacity: 0.88; }
+  50%  { background-position: -3px -1px, 2px 4px, 1px -1px, -2px 4px; opacity: 1; }
+  60%  { background-position: 1px -3px, -4px -1px, -2px 2px, 3px -2px;opacity: 0.78; }
+  70%  { background-position: 4px 1px, 1px -2px, 4px -3px, -1px 2px;  opacity: 0.94; }
+  80%  { background-position: -2px 2px, -3px 4px, -1px -1px, 2px 3px; opacity: 0.85; }
+  90%  { background-position: 1px 4px, 3px -1px, 2px 3px, -4px -2px;  opacity: 0.9; }
+  100% { background-position: 0 0, 0 0, 0 0, 0 0;              opacity: 0.92; }
+}
+
+@keyframes ssi-scan-roll {
+  0%   { top: -12%; }
+  100% { top: 112%; }
+}
+
+@keyframes ssi-nosignal-blink {
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait .ssi-os-no-signal-overlay,
+  #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait .ssi-os-no-signal-overlay::before,
+  #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait .ssi-os-no-signal-overlay::after {
+    animation: none !important;
+  }
+  #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait .ssi-os-video {
+    filter: brightness(0.04) saturate(0);
+  }
+}
+
+.ssi-os-video {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+#ssiOsWindowLayer .ssi-os-video {
+  transition: filter 0.45s ease-out;
+}
+
+/* Phase webcam : au-dessus de la fenêtre OS si les deux coexistaient (normalement exclusives) */
+.ssi-webcam-phase-layer {
+  z-index: 61;
+}
+
+.ssi-webcam-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+/*
+ * Teinte « pellicule Kodak » : chaud, doré, mids un peu levés (sépia léger + saturation).
+ * La couche VHS par-dessus renforce l’aspect archive / magnétoscope.
+ */
+.ssi-webcam-shell .ssi-os-video {
+  filter:
+    brightness(1.05)
+    contrast(1.12)
+    saturate(1.56)
+    sepia(0.14)
+    hue-rotate(348deg);
+  transition: filter 0.45s ease;
+}
+
+/*
+ * Overlay : lignes CRT légères, vignette tube, franges chroma, bande de balayage.
+ * Le grain « vrai » est sur #ssiWebcamGrainCanvas (pixels aléatoires, js/webcam-grain.js).
+ */
+.ssi-vhs-overlay {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  mix-blend-mode: hard-light;
+  opacity: 0.58;
+  background:
+    /* Scanlines serrées mais très légères (1 px sombre tous les 5 px) */
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.034) 0px,
+      rgba(0, 0, 0, 0.034) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    linear-gradient(
+      180deg,
+      rgba(0, 55, 40, 0.07) 0%,
+      transparent 35%,
+      transparent 65%,
+      rgba(15, 35, 22, 0.1) 100%
+    ),
+    linear-gradient(
+      90deg,
+      rgba(255, 40, 60, 0.14) 0%,
+      transparent 10%,
+      transparent 90%,
+      rgba(0, 210, 255, 0.12) 100%
+    ),
+    radial-gradient(
+      ellipse 88% 82% at 50% 48%,
+      transparent 38%,
+      rgba(0, 0, 0, 0.35) 72%,
+      rgba(0, 0, 0, 0.72) 100%
+    );
+  animation: ssiVhsFlicker 0.11s steps(2, end) infinite;
+  box-shadow:
+    inset 0 0 0 1px rgba(0, 0, 0, 0.5),
+    inset 0 0 100px rgba(0, 0, 0, 0.5),
+    inset 0 0 28px rgba(30, 80, 50, 0.25);
+}
+
+/*
+ * Sur la webcam, le canvas est en blend par-dessus : l’animation ssiVhsFlicker (~9 Hz)
+ * de l’overlay passait au travers et donnait un effet stroboscope. On la coupe ici.
+ */
+.ssi-webcam-phase-layer .ssi-vhs-overlay {
+  animation: none;
+}
+
+/* Bande type perte de synchro / balayage CRT */
+.ssi-vhs-overlay::before {
+  content: '';
+  position: absolute;
+  left: -8%;
+  width: 116%;
+  height: 16%;
+  top: 0;
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 250, 220, 0.22) 35%,
+    rgba(180, 255, 210, 0.12) 52%,
+    transparent 100%
+  );
+  mix-blend-mode: screen;
+  opacity: 0.75;
+  filter: blur(0.8px);
+  animation: ssiCrtRollBand 4.2s linear infinite;
+  pointer-events: none;
+}
+
+/* Grain webcam : canvas 2D (pixels aléatoires), au-dessus de l’overlay décoratif */
+.ssi-webcam-grain-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 3;
+  pointer-events: none;
+  mix-blend-mode: overlay;
+  opacity: 0.88;
+  image-rendering: pixelated;
+  image-rendering: crisp-edges;
+}
+
+@keyframes ssiCrtRollBand {
+  0% {
+    transform: translateY(-120%);
+  }
+  100% {
+    transform: translateY(720%);
+  }
+}
+
+@keyframes ssiVhsFlicker {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: translateX(0);
+    filter: brightness(1);
+  }
+  20% {
+    opacity: 0.68;
+    transform: translateX(0.35px);
+    filter: brightness(1.06);
+  }
+  45% {
+    opacity: 0.42;
+    transform: translateX(-0.45px);
+    filter: brightness(0.94);
+  }
+  70% {
+    opacity: 0.62;
+    transform: translateX(0.2px);
+    filter: brightness(1.03);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ssi-vhs-overlay,
+  .ssi-vhs-overlay::before {
+    animation: none !important;
+  }
+  .ssi-vhs-overlay {
+    opacity: 0.48;
+  }
+  .ssi-vhs-overlay::before {
+    opacity: 0.25;
+    transform: translateY(30%);
+  }
+  .ssi-webcam-grain-canvas {
+    opacity: 0.62;
+  }
+}
+
+.sticker-in-pop {
+  animation: stickerInPop 0.4s ease-out forwards;
+}
+
+.sticker-out-plop {
+  animation: stickerOutPlop 0.35s ease-in forwards;
+}
+
+@keyframes stickerInPop {
+  0% {
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes stickerOutPlop {
+  0% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ----- Overlay beat ----- */
+.beat-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 62;
+  background: radial-gradient(
+    circle at center,
+    rgba(2, 209, 174, 0.22) 0%,
+    rgba(107, 0, 221, 0.18) 26%,
+    rgba(255, 48, 156, 0.12) 52%,
+    transparent 80%
+  );
+  opacity: 0;
+  transition: opacity 0.16s ease-out;
+}
+
+.beat-overlay.flash {
+  opacity: 0.28;
+  transition: opacity 0.14s ease-out;
+}
+
+/* ----- Overlay CRT (scanlines + bruit + vignette) ----- */
+.crt-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 63;
+  mix-blend-mode: soft-light;
+}
+
+.crt-noise,
+.crt-scanlines,
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+}
+
+/* Bruit très léger, teinté couleur SSI (turquoise/ultra violet) */
+.crt-noise {
+  background-image:
+    radial-gradient(circle at 0 0, rgba(2, 209, 174, 0.12) 0, transparent 55%),
+    radial-gradient(circle at 100% 0, rgba(107, 0, 221, 0.14) 0, transparent 55%),
+    linear-gradient(90deg, rgba(255, 48, 156, 0.08) 0, transparent 40%, rgba(255, 222, 1, 0.08) 70%, transparent 100%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.045) 1px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0) 3px
+    );
+  opacity: 0.22;
+  animation: crtNoiseShift 4s linear infinite;
+}
+
+@keyframes crtNoiseShift {
+  0% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-1px, 1px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* Scanlines horizontales type écran cathodique */
+.crt-scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.22) 0,
+    rgba(0, 0, 0, 0.22) 1px,
+    rgba(0, 0, 0, 0) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  animation: crtScanMove 9s linear infinite;
+}
+
+@keyframes crtScanMove {
+  0% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+  55% {
+    transform: translateY(1px);
+  }
+  60% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Vignette et légère teinte globale SSI */
+.crt-vignette {
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0, transparent 55%, transparent 70%, rgba(0, 0, 0, 0.75) 100%),
+    radial-gradient(circle at center, rgba(2, 209, 174, 0.2) 0, transparent 60%);
+  opacity: 0.9;
+}
+
+/* ===== Indicateur "clic pour démarrer" ===== */
+.start-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+.start-hint span {
+  font-family: "Comic Sans MS", "Trebuchet MS", Tahoma, sans-serif;
+  font-size: 1.4rem;
+  color: #ff309c;
+  text-shadow: 0 0 18px #ff309c, 0 0 40px #6b00dd;
+  letter-spacing: 0.12em;
+  animation: hintPulse 1.8s ease-in-out infinite;
+  border: 2px solid rgba(255, 48, 156, 0.45);
+  border-radius: 8px;
+  padding: 0.5em 1.2em;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+@keyframes hintPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.97); }
+}
+
+/* ===== Bandeau opérateur LIVE (alertes seulement) ===== */
+.live-status {
+  position: absolute;
+  left: 14px;
+  bottom: 52px;
+  z-index: 65;
+  max-width: min(92%, 520px);
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #e8e8f0;
+  background: rgba(0, 0, 0, 0.72);
+  border: 1px solid rgba(2, 209, 174, 0.35);
+  border-radius: 8px;
+  pointer-events: none;
+  backdrop-filter: blur(6px);
+}
+
+.live-status--warn {
+  border-color: rgba(255, 48, 156, 0.55);
+  color: #ffde01;
+  text-shadow: 0 0 12px rgba(255, 48, 156, 0.4);
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   THÈME DIAGONAL CINÉMA
+   Activation : <html data-app-theme="diagonal"> (via phase-remote.js)
+   Palette : rose magenta #f040b0 · noir #000000 · blanc #ffffff
+   ═══════════════════════════════════════════════════════════════ */
+
+/* Gradients de fond — variantes dark / light / mid Diagonal */
+[data-app-theme="diagonal"] .bg-gradient[data-theme="dark"] {
+  background: linear-gradient(
+    125deg,
+    #050003 0%,
+    #1a0016 18%,
+    #f040b0 38%,
+    #ffffff 62%,
+    #0a0008 82%,
+    #000000 100%
+  );
+}
+
+[data-app-theme="diagonal"] .bg-gradient[data-theme="light"] {
+  background: linear-gradient(
+    125deg,
+    #ffffff 0%,
+    #ffd0f0 18%,
+    #f040b0 38%,
+    #ff88d4 60%,
+    #1a0016 82%,
+    #000000 100%
+  );
+}
+
+[data-app-theme="diagonal"] .bg-gradient[data-theme="mid"] {
+  background: linear-gradient(
+    125deg,
+    #000000 0%,
+    #2a0020 16%,
+    #f040b0 34%,
+    #ffffff 56%,
+    #f040b0 78%,
+    #000000 100%
+  );
+}
+
+/* ── Fausse fenêtre OS — style Samuel / croquis ─────────────────── */
+/* Contour noir, fond quasi-blanc, barre rose pâle, ombre graphique */
+[data-app-theme="diagonal"] .ssi-os-window {
+  border: 2px solid #000;
+  background: rgba(255, 252, 254, 0.97);
+  box-shadow:
+    4px 4px 0 #000,
+    0 0 0 1px #000;
+}
+
+[data-app-theme="diagonal"] .ssi-os-titlebar {
+  background: #ffc8e8;
+  border-bottom: 1.5px solid #000;
+}
+
+/* Dots traffic light — tous rose pâle avec contour noir */
+[data-app-theme="diagonal"] .ssi-os-dot--r,
+[data-app-theme="diagonal"] .ssi-os-dot--y,
+[data-app-theme="diagonal"] .ssi-os-dot--g {
+  background: #ffb0d8;
+  border: 1.5px solid #000;
+  box-shadow: none;
+}
+
+/* Texte de la barre — masqué, remplacé par pseudo-élément */
+[data-app-theme="diagonal"] .ssi-os-title {
+  color: transparent;
+  text-shadow: none;
+  position: relative;
+}
+
+[data-app-theme="diagonal"] #ssiOsWindowLayer .ssi-os-title::after {
+  content: '★  La Boum du Diago  ★';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Comic Sans MS", "Chalkboard SE", "Bradley Hand", cursive;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #000;
+  text-shadow: none;
+}
+
+[data-app-theme="diagonal"] #ssiWebcamPhaseLayer .ssi-os-title::after {
+  content: '★  direct scène  ★';
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Comic Sans MS", "Chalkboard SE", "Bradley Hand", cursive;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #000;
+  text-shadow: none;
+}
+
+/* ── Layer TV au-dessus de la vidéo (Diagonal) ───────────────────
+   Overlay scanlines + vignette inséré DANS le shell vidéo
+   (z-index local : au-dessus de la vidéo et du no-signal overlay) */
+[data-app-theme="diagonal"] #ssiOsWindowLayer .ssi-os-video-shell::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 6;
+  pointer-events: none;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.07) 0px,
+      rgba(0, 0, 0, 0.07) 1px,
+      transparent 1px,
+      transparent 4px
+    ),
+    radial-gradient(
+      ellipse 92% 86% at 50% 50%,
+      transparent 38%,
+      rgba(0, 0, 0, 0.18) 68%,
+      rgba(0, 0, 0, 0.52) 100%
+    );
+  mix-blend-mode: multiply;
+  opacity: 0.72;
+  animation: diagonalTvPulse 3.6s ease-in-out infinite;
+}
+
+@keyframes diagonalTvPulse {
+  0%, 100% { opacity: 0.68; }
+  40%       { opacity: 0.78; }
+  70%       { opacity: 0.62; }
+}
+
+/* "NO SIGNAL" — teinte rose Diagonal */
+[data-app-theme="diagonal"] #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait
+  .ssi-os-no-signal-overlay::before {
+  background: linear-gradient(
+    180deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.07) 25%,
+    rgba(255, 180, 230, 0.22) 50%,
+    rgba(255, 255, 255, 0.07) 75%,
+    transparent 100%
+  );
+}
+
+[data-app-theme="diagonal"] #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait
+  .ssi-os-no-signal-overlay::after {
+  color: rgba(255, 210, 240, 0.75);
+  text-shadow:
+    0 0 8px rgba(240, 64, 176, 0.9),
+    0 0 24px rgba(240, 64, 176, 0.5),
+    0 0 50px rgba(240, 64, 176, 0.2);
+}
+
+/* ── Beat overlay plus fluide (Diagonal) ─────────────────────────
+   Flash plus doux, fondu plus long → aspect cinéma/projecteur */
+[data-app-theme="diagonal"] .beat-overlay {
+  background: radial-gradient(
+    circle at center,
+    rgba(240, 64, 176, 0.18) 0%,
+    rgba(0, 0, 0, 0.10) 30%,
+    transparent 72%
+  );
+  transition: opacity 0.55s ease-in-out;
+}
+
+[data-app-theme="diagonal"] .beat-overlay.flash {
+  opacity: 0.16;
+  transition: opacity 0.09s ease-out;
+}
+
+/* CRT bruit — teinte rose Diagonal */
+[data-app-theme="diagonal"] .crt-noise {
+  background-image:
+    radial-gradient(circle at 0 0, rgba(240, 64, 176, 0.12) 0, transparent 55%),
+    radial-gradient(circle at 100% 0, rgba(0, 0, 0, 0.14) 0, transparent 55%),
+    linear-gradient(90deg, rgba(240, 64, 176, 0.08) 0, transparent 40%, rgba(255, 255, 255, 0.04) 70%, transparent 100%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.045) 1px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0) 3px
+    );
+}
+
+/* CRT vignette — centre rose Diagonal */
+[data-app-theme="diagonal"] .crt-vignette {
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.04) 0, transparent 55%, transparent 70%, rgba(0, 0, 0, 0.75) 100%),
+    radial-gradient(circle at center, rgba(240, 64, 176, 0.14) 0, transparent 60%);
+}
+
+/* Indicateur "clic pour démarrer" — Diagonal */
+[data-app-theme="diagonal"] .start-hint span {
+  color: #f040b0;
+  text-shadow: 0 0 18px #f040b0, 0 0 40px #000000;
+  border-color: rgba(240, 64, 176, 0.5);
+}
+
+/* ── Webcam — rendu « dessin animé Samuel » (Diagonal) ───────────
+   Grayscale + contraste très élevé → aplats noir/blanc comme
+   le style croquis rapide de la série Samuel (Émilie Tronche).
+   Le grain canvas existant renforce l'aspect papier/texture.    */
+
+/* Surcharge le filtre Kodak warm existant → croquis B&W */
+[data-app-theme="diagonal"] .ssi-webcam-shell .ssi-os-video {
+  filter:
+    grayscale(1)
+    contrast(3.2)
+    brightness(1.18) !important;
+}
+
+/* Overlay VHS neutralisé → scanlines légères + vignette, sans teintes */
+[data-app-theme="diagonal"] .ssi-webcam-phase-layer .ssi-vhs-overlay {
+  mix-blend-mode: multiply;
+  opacity: 0.55;
+  background:
+    repeating-linear-gradient(
+      180deg,
+      rgba(0, 0, 0, 0.06) 0px,
+      rgba(0, 0, 0, 0.06) 1px,
+      transparent 1px,
+      transparent 5px
+    ),
+    radial-gradient(
+      ellipse 88% 82% at 50% 48%,
+      transparent 36%,
+      rgba(0, 0, 0, 0.22) 68%,
+      rgba(0, 0, 0, 0.62) 100%
+    );
+  animation: none;
+  box-shadow: none;
+}
+
+/* Bandeau opérateur — Diagonal */
+[data-app-theme="diagonal"] .live-status {
+  border-color: rgba(240, 64, 176, 0.4);
+}
+
+[data-app-theme="diagonal"] .live-status--warn {
+  border-color: rgba(240, 64, 176, 0.65);
+  color: #ffffff;
+  text-shadow: 0 0 12px rgba(240, 64, 176, 0.5);
+}

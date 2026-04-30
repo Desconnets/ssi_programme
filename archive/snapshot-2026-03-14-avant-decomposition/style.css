@@ -1,0 +1,337 @@
+/* ===== Plein écran – animation uniquement, 16:9 ===== */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: "Comic Sans MS", "Trebuchet MS", Tahoma, sans-serif;
+  background: #0d0d14;
+  min-height: 100vh;
+  overflow: hidden;
+}
+
+.app {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0a0a12;
+}
+
+/* Scène 16:9 plein écran (remplit la hauteur ou la largeur) */
+.scene {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  max-width: 177.78vh;   /* 16/9 * 100vh */
+  max-height: 56.25vw;   /* 9/16 * 100vw */
+  overflow: hidden;
+}
+
+/* ----- Mini-contrôles audio (bas droite) ----- */
+.mini-controls {
+  position: absolute;
+  right: 18px;
+  bottom: 14px;
+  display: flex;
+  gap: 6px;
+  padding: 6px 8px;
+  background: rgba(5, 5, 15, 0.7);
+  border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.55);
+  border: 1px solid rgba(255,255,255,0.25);
+  backdrop-filter: blur(8px);
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.mini-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  background: rgba(255,255,255,0.12);
+  color: #f5f5ff;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+  opacity: 0.78;
+}
+
+.mini-btn:hover {
+  background: rgba(255,255,255,0.26);
+  transform: translateY(-1px);
+  opacity: 1;
+}
+
+.mini-btn:active {
+  transform: translateY(0);
+  background: rgba(255,255,255,0.4);
+}
+
+.mini-btn-small {
+  width: 24px;
+  height: 24px;
+  font-size: 13px;
+}
+
+/* ----- Fond animé Y2K ----- */
+.background {
+  position: absolute;
+  inset: 0;
+}
+
+.bg-video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: saturate(1.1) contrast(1.08) brightness(0.9);
+}
+
+.bg-gradient {
+  position: absolute;
+  inset: -50%;
+  background-size: 400% 400%;
+  animation: gradientShift 12s ease infinite;
+  opacity: 0.65;
+  transition: background 12s ease-in-out;
+}
+
+/* Thème sombre – basé sur ultra violet + turquoise */
+.bg-gradient[data-theme="dark"] {
+  background: linear-gradient(
+    125deg,
+    #050216 0%,
+    #12042a 18%,
+    #6b00dd 38%,
+    #02d1ae 64%,
+    #04121a 82%,
+    #02010b 100%
+  );
+}
+
+/* Thème clair – teinte plus lumineuse dans la palette SSI */
+.bg-gradient[data-theme="light"] {
+  background: linear-gradient(
+    125deg,
+    #ff309c 0%,
+    #ff63b7 18%,
+    #ffde01 38%,
+    #b5f3df 60%,
+    #6b00dd 82%,
+    #3c016d 100%
+  );
+}
+
+/* Thème intermédiaire – mix équilibré des 4 couleurs SSI */
+.bg-gradient[data-theme="mid"] {
+  background: linear-gradient(
+    125deg,
+    #02010f 0%,
+    #261050 16%,
+    #6b00dd 34%,
+    #02d1ae 56%,
+    #ffde01 78%,
+    #ff309c 100%
+  );
+}
+
+@keyframes gradientShift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+
+/* ----- Stickers ----- */
+.stickers-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.stickers-layer .sticker {
+  position: absolute;
+  pointer-events: none;
+  user-select: none;
+  max-width: 22%;
+  max-height: 22%;
+  object-fit: contain;
+  will-change: transform;
+  transition: opacity 0.6s ease;
+}
+
+.sticker-in-pop {
+  animation: stickerInPop 0.4s ease-out forwards;
+}
+
+.sticker-out-plop {
+  animation: stickerOutPlop 0.35s ease-in forwards;
+}
+
+@keyframes stickerInPop {
+  0% {
+    opacity: 0;
+  }
+  60% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+@keyframes stickerOutPlop {
+  0% {
+    opacity: 1;
+  }
+  40% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ----- Overlay beat ----- */
+.beat-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(
+    circle at center,
+    rgba(2, 209, 174, 0.22) 0%,
+    rgba(107, 0, 221, 0.18) 26%,
+    rgba(255, 48, 156, 0.12) 52%,
+    transparent 80%
+  );
+  opacity: 0;
+  transition: opacity 0.16s ease-out;
+}
+
+.beat-overlay.flash {
+  opacity: 0.28;
+  transition: opacity 0.14s ease-out;
+}
+
+/* ----- Overlay CRT (scanlines + bruit + vignette) ----- */
+.crt-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+  mix-blend-mode: soft-light;
+}
+
+.crt-noise,
+.crt-scanlines,
+.crt-vignette {
+  position: absolute;
+  inset: 0;
+}
+
+/* Bruit très léger, teinté couleur SSI (turquoise/ultra violet) */
+.crt-noise {
+  background-image:
+    radial-gradient(circle at 0 0, rgba(2, 209, 174, 0.12) 0, transparent 55%),
+    radial-gradient(circle at 100% 0, rgba(107, 0, 221, 0.14) 0, transparent 55%),
+    linear-gradient(90deg, rgba(255, 48, 156, 0.08) 0, transparent 40%, rgba(255, 222, 1, 0.08) 70%, transparent 100%),
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 255, 255, 0.045),
+      rgba(255, 255, 255, 0.045) 1px,
+      rgba(0, 0, 0, 0) 2px,
+      rgba(0, 0, 0, 0) 3px
+    );
+  opacity: 0.22;
+  animation: crtNoiseShift 4s linear infinite;
+}
+
+@keyframes crtNoiseShift {
+  0% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(-1px, 1px, 0); }
+  100% { transform: translate3d(0, 0, 0); }
+}
+
+/* Scanlines horizontales type écran cathodique */
+.crt-scanlines {
+  background-image: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.22) 0,
+    rgba(0, 0, 0, 0.22) 1px,
+    rgba(0, 0, 0, 0) 3px,
+    rgba(0, 0, 0, 0) 4px
+  );
+  opacity: 0.4;
+  mix-blend-mode: multiply;
+  animation: crtScanMove 9s linear infinite;
+}
+
+@keyframes crtScanMove {
+  0% {
+    transform: translateY(0);
+  }
+  45% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+  55% {
+    transform: translateY(1px);
+  }
+  60% {
+    transform: translateY(0);
+  }
+  100% {
+    transform: translateY(0);
+  }
+}
+
+/* Vignette et légère teinte globale SSI */
+.crt-vignette {
+  background:
+    radial-gradient(circle at center, rgba(255, 255, 255, 0.05) 0, transparent 55%, transparent 70%, rgba(0, 0, 0, 0.75) 100%),
+    radial-gradient(circle at center, rgba(2, 209, 174, 0.2) 0, transparent 60%);
+  opacity: 0.9;
+}
+
+/* ===== Indicateur "clic pour démarrer" ===== */
+.start-hint {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition: opacity 0.6s ease;
+}
+
+.start-hint span {
+  font-family: "Comic Sans MS", "Trebuchet MS", Tahoma, sans-serif;
+  font-size: 1.4rem;
+  color: #ff309c;
+  text-shadow: 0 0 18px #ff309c, 0 0 40px #6b00dd;
+  letter-spacing: 0.12em;
+  animation: hintPulse 1.8s ease-in-out infinite;
+  border: 2px solid rgba(255, 48, 156, 0.45);
+  border-radius: 8px;
+  padding: 0.5em 1.2em;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+}
+
+@keyframes hintPulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.97); }
+}

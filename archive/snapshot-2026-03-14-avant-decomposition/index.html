@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playlist Visuelle Années 2000</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app">
+    <div class="scene" id="scene">
+      <div class="background" id="background">
+        <video class="bg-video" id="bgVideo" autoplay muted loop playsinline></video>
+        <div class="bg-gradient" id="bgGradient"></div>
+      </div>
+      <div class="stickers-layer" id="stickersLayer"></div>
+      <div class="beat-overlay" id="beatOverlay"></div>
+
+      <div class="mini-controls">
+        <button id="btnPrev" class="mini-btn" aria-label="Piste précédente">⏮</button>
+        <button id="btnPlayPause" class="mini-btn" aria-label="Lecture / Pause">▶</button>
+        <button id="btnNext" class="mini-btn" aria-label="Piste suivante">⏭</button>
+        <button id="btnFullscreen" class="mini-btn mini-btn-small" aria-label="Plein écran">⛶</button>
+      </div>
+
+      <div class="crt-overlay">
+        <div class="crt-noise"></div>
+        <div class="crt-scanlines"></div>
+        <div class="crt-vignette"></div>
+      </div>
+
+      <div id="startHint" class="start-hint">
+        <span>▶ cliquez pour démarrer</span>
+      </div>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>

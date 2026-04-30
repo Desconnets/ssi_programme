@@ -1,0 +1,6 @@
+Dossier phase_videos — thème SSI
+=================================
+Placez ici les vidéos de la fausse fenêtre OS pour le thème SSI.
+Extensions acceptées : .mp4  .webm  .mov  .m4v
+
+Repli sur phase_videos/ (racine) si vide.

@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Playlist Visuelle Années 2000</title>
+  <link rel="stylesheet" href="style.css">
+  <!--
+    1er chargement : sans ceci, le navigateur télécharge souvent les modules ES en cascade
+    (main → imports → sous-imports). Les modulepreload lancent les fetch en parallèle dès le HTML.
+    Les rafraîchissements sont déjà plus fluides grâce au cache disque + mémoire.
+  -->
+  <link rel="modulepreload" href="js/main.js">
+  <link rel="modulepreload" href="js/config.js">
+  <link rel="modulepreload" href="js/api.js">
+  <link rel="modulepreload" href="js/debug.js">
+  <link rel="modulepreload" href="js/utils.js">
+  <link rel="modulepreload" href="js/live-telemetry.js">
+  <link rel="modulepreload" href="js/sticker-fallback.js">
+  <link rel="modulepreload" href="js/behaviors.js">
+  <link rel="modulepreload" href="js/audio.js">
+  <link rel="modulepreload" href="js/phases.js">
+  <link rel="modulepreload" href="js/webcam-grain.js">
+  <link rel="modulepreload" href="js/visuals.js">
+  <link rel="modulepreload" href="js/video-load-log.js">
+  <link rel="modulepreload" href="js/background-playback.js">
+  <link rel="modulepreload" href="js/phase-remote.js">
+  <link rel="modulepreload" href="js/phase-panel-app.js">
+</head>
+<body>
+  <div class="app">
+    <div class="scene" id="scene">
+      <div class="background" id="background">
+        <video class="bg-video" id="bgVideo" autoplay muted loop playsinline preload="auto" fetchpriority="high"></video>
+        <div class="bg-gradient" id="bgGradient"></div>
+      </div>
+      <div class="stickers-layer" id="stickersLayer"></div>
+
+      <div id="ssiOsWindowLayer" class="ssi-os-window-layer" hidden aria-hidden="true">
+        <div class="ssi-os-window-shaker">
+          <div class="ssi-os-window">
+            <div class="ssi-os-titlebar">
+              <span class="ssi-os-traffic">
+                <span class="ssi-os-dot ssi-os-dot--r" aria-hidden="true"></span>
+                <span class="ssi-os-dot ssi-os-dot--y" aria-hidden="true"></span>
+                <span class="ssi-os-dot ssi-os-dot--g" aria-hidden="true"></span>
+              </span>
+              <span class="ssi-os-title">SSI_Media — lecture</span>
+            </div>
+            <div class="ssi-os-video-shell">
+              <video id="ssiOsWindowVideo" class="ssi-os-video" playsinline muted></video>
+              <!-- Visible tant que la vidéo n’a pas vraiment démarré (événement playing) -->
+              <div class="ssi-os-no-signal-overlay" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="ssiWebcamPhaseLayer" class="ssi-os-window-layer ssi-webcam-phase-layer" hidden aria-hidden="true">
+        <div class="ssi-os-window-shaker">
+          <div class="ssi-os-window">
+            <div class="ssi-os-titlebar">
+              <span class="ssi-os-traffic">
+                <span class="ssi-os-dot ssi-os-dot--r" aria-hidden="true"></span>
+                <span class="ssi-os-dot ssi-os-dot--y" aria-hidden="true"></span>
+                <span class="ssi-os-dot ssi-os-dot--g" aria-hidden="true"></span>
+              </span>
+              <span class="ssi-os-title">SSI_CAM — signal direct</span>
+            </div>
+            <div class="ssi-os-video-shell ssi-webcam-shell">
+              <video id="ssiWebcamVideo" class="ssi-os-video" playsinline muted autoplay></video>
+              <canvas
+                id="ssiWebcamGrainCanvas"
+                class="ssi-webcam-grain-canvas"
+                width="320"
+                height="240"
+                aria-hidden="true"
+              ></canvas>
+              <div class="ssi-vhs-overlay" aria-hidden="true"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="beat-overlay" id="beatOverlay"></div>
+
+      <div class="mini-controls-hud" id="miniControlsHud" aria-label="Zone pour afficher le lecteur">
+        <div class="mini-controls">
+          <button id="btnPrev" class="mini-btn" aria-label="Piste précédente">⏮</button>
+          <button id="btnPlayPause" class="mini-btn" aria-label="Lecture / Pause">▶</button>
+          <button id="btnNext" class="mini-btn" aria-label="Piste suivante">⏭</button>
+          <button id="btnFullscreen" class="mini-btn mini-btn-small" aria-label="Plein écran">⛶</button>
+        </div>
+      </div>
+
+      <div class="crt-overlay">
+        <div class="crt-noise"></div>
+        <div class="crt-scanlines"></div>
+        <div class="crt-vignette"></div>
+      </div>
+
+      <div id="startHint" class="start-hint">
+        <span>▶ cliquez pour démarrer — la caméra peut être demandée ici aussi</span>
+      </div>
+
+      <div id="liveStatus" class="live-status" role="status" aria-live="polite" hidden></div>
+    </div>
+  </div>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+Archive — copie de sauvegarde avant réorganisation du code
+===========================================================
+
+Date du snapshot : 2026-03-14
+
+Contenu :
+  - app.js      → toute la logique front (audio, stickers, phases, UI) en un seul fichier
+  - index.html  → page principale (script : app.js)
+  - style.css   → styles
+  - server.py   → serveur Python + API + normalisation audio
+
+Pourquoi :
+  Garder une référence exacte de « comment c’était fait » avant de découper
+  le JavaScript en plusieurs modules (sans tout réécrire d’un coup).
+
+Les fichiers actifs du projet restent à la racine (app.js, etc.) ; cette archive
+n’est pas exécutée telle quelle : c’est une copie de lecture / rollback manuel.

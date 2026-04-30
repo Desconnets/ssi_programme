@@ -1,0 +1,12 @@
+{
+  "name": "playlist-visuelle-2000",
+  "version": "1.0.0",
+  "description": "Playlist + effets visuels années 2000, musique et stickers depuis dossiers",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2"
+  }
+}
