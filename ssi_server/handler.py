@@ -170,9 +170,9 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
             bg_files = phase_remote_state.get_cached_background_filenames()
             snap = phase_remote_state.get_snapshot()
             snap['phaseVideoCount'] = len(pv_files)
-            snap['phaseVideoFiles'] = pv_files[:32]
+            snap['phaseVideoFiles'] = pv_files[:200]
             snap['backgroundVideoCount'] = len(bg_files)
-            snap['backgroundVideoFiles'] = bg_files[:32]
+            snap['backgroundVideoFiles'] = bg_files[:200]
             snap['validPhases'] = sorted(phase_remote_state.VALID_PHASES)
             snap['panelPhases'] = phase_remote_state.panel_phase_definitions()
             # Poll ~2×/s × plusieurs onglets : ne pas spammer [SSI·API] (voir SSI_PHASE_REMOTE_LOG=1)
@@ -246,9 +246,9 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
                 **snap,
                 'ok': True,
                 'phaseVideoCount': len(pv_files),
-                'phaseVideoFiles': pv_files[:32],
+                'phaseVideoFiles': pv_files[:200],
                 'backgroundVideoCount': len(bg_files),
-                'backgroundVideoFiles': bg_files[:32],
+                'backgroundVideoFiles': bg_files[:200],
                 'panelPhases': phase_remote_state.panel_phase_definitions(),
             }
             parts = []

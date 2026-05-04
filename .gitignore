@@ -1,0 +1,42 @@
+# ── Médias (trop volumineux pour Git) ──────────────────────────────
+# Déposer vos fichiers dans ces dossiers en local, ils ne seront pas versionnés.
+musique/
+virgules/
+stickers/
+backgrounds/
+phase_videos/
+
+# ── Cache Python ────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.Python
+
+# ── Environnement virtuel Python ────────────────────────────────────
+venv/
+.venv/
+env/
+.env
+
+# ── Node (package.json legacy, non utilisé activement) ─────────────
+node_modules/
+npm-debug.log*
+
+# ── macOS ────────────────────────────────────────────────────────────
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# ── Éditeurs ────────────────────────────────────────────────────────
+.vscode/
+*.swp
+*.swo
+*~
+
+# ── Fichiers temporaires ffmpeg / conversion ────────────────────────
+*.part
+*.tmp
