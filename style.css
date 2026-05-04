@@ -912,7 +912,7 @@ body.ssi-micro-audio #btnNext {
 }
 
 [data-app-theme="diagonal"] #ssiOsWindowLayer .ssi-os-title::after {
-  content: '★  La Boum du Diago  ★';
+  content: '★  La BOUM de Samuel !  ★';
   position: absolute;
   inset: 0;
   display: flex;
@@ -927,7 +927,7 @@ body.ssi-micro-audio #btnNext {
 }
 
 [data-app-theme="diagonal"] #ssiWebcamPhaseLayer .ssi-os-title::after {
-  content: '★  direct scène  ★';
+  content: '★  La BOUM de Samuel !  ★';
   position: absolute;
   inset: 0;
   display: flex;

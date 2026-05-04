@@ -66,8 +66,8 @@ function tick(now = 0) {
     osWindowShakePhase += 0.14 + overall * 0.34 + bump * 0.45;
     const fast = Math.sin(osWindowShakePhase);
     const slow = Math.sin(osWindowShakePhase * 0.61);
-    const amp = 3.2 + overall * 17 + bass * 9 + bump * 14;
-    const targetX = fast * amp + slow * (2.2 + overall * 5.5);
+    const amp = 1.5 + overall * 7 + bass * 4 + bump * 6;
+    const targetX = fast * amp + slow * (1.2 + overall * 2.5);
     osShakeSmoothX = lerp(osShakeSmoothX, targetX, 0.24);
     activeShaker.style.transform = `translate3d(${osShakeSmoothX}px, 0, 0)`;
   } else {

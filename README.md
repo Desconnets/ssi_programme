@@ -18,16 +18,48 @@ Développé pour les soirées **SSI** et **Diagonal Cinéma** (Les Valseurs) —
 
 ---
 
-## Prérequis
+## Installation
 
-- **Python 3** (serveur HTTP + normalisation optionnelle).
-- **`ffmpeg`** recommandé pour la normalisation audio au démarrage (`brew install ffmpeg` sur macOS). Sans ffmpeg, le serveur démarre quand même ; la normalisation est ignorée.
+**Aucune dépendance pip** — uniquement la bibliothèque standard Python. Pas de `pip install` nécessaire.
+
+### 1. Python ≥ 3.9
+
+```bash
+python3 --version   # doit afficher 3.9 ou supérieur
+```
+
+- macOS : Python est préinstallé. Sinon : https://python.org  
+- Linux : `sudo apt install python3` ou `sudo dnf install python3`
+
+### 2. ffmpeg (recommandé)
+
+Nécessaire pour la **conversion automatique** des vidéos (`.mov`, `.gif` → MP4) et la **normalisation audio** au démarrage. Sans lui le serveur démarre quand même, les fichiers non convertis sont simplement ignorés.
+
+```bash
+# macOS
+brew install ffmpeg
+
+# Linux (Debian/Ubuntu)
+sudo apt install ffmpeg
+```
+
+### 3. Cloner le projet
+
+```bash
+git clone https://github.com/VOTRE-COMPTE/NOM-DU-REPO.git
+cd NOM-DU-REPO
+```
+
+Pas de `pip install -r requirements.txt` — il n'y a rien à installer côté Python. Le fichier `requirements.txt` documente uniquement les prérequis système.
 
 ---
 
 ## Lancement
 
-À la **racine du projet** :
+**Option A — double-clic (macOS)**  
+Ouvrir `Lancer.command` depuis le Finder. Un Terminal s'ouvre, le serveur démarre et les deux onglets (scène + télécommande) s'ouvrent automatiquement dans le navigateur.
+
+**Option B — terminal**
 
 ```bash
 python3 server.py

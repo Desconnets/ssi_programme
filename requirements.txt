@@ -1,0 +1,21 @@
+# ────────────────────────────────────────────────────────────────
+# Ce projet n'a PAS de dépendances pip.
+# Tout le code Python utilise uniquement la bibliothèque standard
+# (json, os, threading, http.server, subprocess, pathlib…).
+#
+# PRÉREQUIS SYSTÈME
+# ─────────────────
+# • Python >= 3.9
+#       macOS  : préinstallé ou https://python.org
+#       Linux  : sudo apt install python3 / sudo dnf install python3
+#
+# • ffmpeg  (recommandé — requis pour la conversion vidéo/audio)
+#       macOS  : brew install ffmpeg
+#       Linux  : sudo apt install ffmpeg
+#       Sans ffmpeg : le serveur démarre quand même mais ne convertit
+#                     pas les vidéos/audios déposés dans les dossiers.
+#
+# LANCEMENT
+# ─────────
+# python3 server.py
+# ────────────────────────────────────────────────────────────────
