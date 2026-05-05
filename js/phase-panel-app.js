@@ -191,6 +191,7 @@ async function bootstrap() {
   const btnIdleResumeApply = document.getElementById('btnPanelIdleResumeApply');
   const btnThemeSsi = document.getElementById('btnThemeSsi');
   const btnThemeDiagonal = document.getElementById('btnThemeDiagonal');
+  const btnPausePhases = document.getElementById('btnPausePhases');
 
   if (
     !logEl ||
@@ -209,7 +210,8 @@ async function bootstrap() {
     !idleResumeSec ||
     !btnIdleResumeApply ||
     !btnThemeSsi ||
-    !btnThemeDiagonal
+    !btnThemeDiagonal ||
+    !btnPausePhases
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -272,6 +274,11 @@ async function bootstrap() {
       const activeTheme = typeof j.theme === 'string' ? j.theme : 'ssi';
       btnThemeSsi.classList.toggle('active', activeTheme === 'ssi');
       btnThemeDiagonal.classList.toggle('active', activeTheme === 'diagonal');
+
+      /* Sync bouton pause */
+      const isPaused = Boolean(j.phasesPaused);
+      btnPausePhases.textContent = isPaused ? '▶ Reprendre les phases' : '⏸ Pause phases (fond uniquement)';
+      btnPausePhases.style.background = isPaused ? '#2a6e2a' : '';
 
       bgAuto.checked = Boolean(j.backgroundAutoRotate);
       const nBg = bgFiles.length;
@@ -356,6 +363,27 @@ async function bootstrap() {
 
   btnThemeSsi.addEventListener('click', () => sendTheme('ssi'));
   btnThemeDiagonal.addEventListener('click', () => sendTheme('diagonal'));
+
+  btnPausePhases.addEventListener('click', async () => {
+    const nowPaused = btnPausePhases.textContent.includes('Pause');
+    const next = nowPaused;
+    log.append('cmd', next ? 'Pause phases' : 'Reprise phases');
+    try {
+      const res = await postRemote({ pausePhases: next });
+      if (res.ok && res.json) {
+        const p = Boolean(res.json.phasesPaused);
+        btnPausePhases.textContent = p ? '▶ Reprendre les phases' : '⏸ Pause phases (fond uniquement)';
+        btnPausePhases.style.background = p ? '#2a6e2a' : '';
+        log.append('ok', p ? 'Phases en pause — fond actif' : 'Phases reprises');
+        statusLine.textContent = `seq=${res.json.seq} · ${p ? 'pause' : 'actif'}`;
+      } else {
+        log.append('err', `HTTP ${res.status}`, res.text.slice(0, 500));
+      }
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST pause', m);
+    }
+  });
 
   btnIdleResumeApply.addEventListener('click', async () => {
     let sec = parseInt(idleResumeSec.value, 10);

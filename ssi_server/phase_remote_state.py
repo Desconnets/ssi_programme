@@ -28,6 +28,9 @@ _idle_resume_ms: int = 60000
 _theme: str = 'ssi'
 VALID_THEMES = frozenset({'ssi', 'diagonal'})
 
+# Pause du cycle visuel (phases) — fond + CRT continuent
+_phases_paused: bool = False
+
 VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam'})
 
 # Ordre des boutons dans phase_panel.html / futurs clients — ajouter une phase : VALID_PHASES + ce tuple + libellé.
@@ -143,6 +146,7 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'backgroundVideoIndex': _bg_forced_video_index,
         'idleResumeMs': _idle_resume_ms,
         'theme': _theme,
+        'phasesPaused': _phases_paused,
     }
 
 
@@ -162,7 +166,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     « phase » est optionnel si seuls des réglages fond sont envoyés.
     """
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
-    global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme
+    global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -174,16 +178,17 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_bg_index = 'backgroundVideoIndex' in data
     has_idle_resume = 'idleResumeMs' in data
     has_theme = 'theme' in data
+    has_pause = 'pausePhases' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
-            and not has_idle_resume and not has_theme:
+            and not has_idle_resume and not has_theme and not has_pause:
         raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, '
             'backgroundVideoIndex, idleResumeMs, theme'
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
-        and not has_bg_auto and not has_bg_index and not has_theme
+        and not has_bg_auto and not has_bg_index and not has_theme and not has_pause
 
     with _lock:
         if has_phase:
@@ -245,6 +250,9 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
                 # Invalider les caches de listes médias pour forcer un re-scan
                 _pv_list_cache = None
                 _bg_list_cache = None
+
+        if has_pause:
+            _phases_paused = bool(data.get('pausePhases'))
 
         if not idle_only:
             _seq += 1

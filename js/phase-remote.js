@@ -16,6 +16,7 @@ import {
   initStickers,
   initPhaseVideos,
   setOsWindowMinLoopMs,
+  setPhasePaused,
 } from './phases.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
 
@@ -47,6 +48,8 @@ export function startPhaseRemotePolling() {
   let idleFiredForLastCommandMs = null;
   /** Thème identité actuellement appliqué sur la page scène. */
   let lastAppliedTheme = null;
+  /** État pause phases appliqué sur la page scène. */
+  let lastAppliedPaused = null;
   /** @type {AbortController | null} */
   let abortCtl = null;
   let timeoutId = 0;
@@ -79,6 +82,13 @@ export function startPhaseRemotePolling() {
         }
       }
 
+      /* Pause / reprise du cycle visuel */
+      const isPaused = Boolean(data.phasesPaused);
+      if (isPaused !== lastAppliedPaused) {
+        lastAppliedPaused = isPaused;
+        setPhasePaused(isPaused);
+      }
+
       /* Changement de thème identité (indépendant de seq — peut changer sans phase) */
       const newTheme = typeof data.theme === 'string' ? data.theme : 'ssi';
       if (newTheme !== lastAppliedTheme) {
@@ -107,7 +117,10 @@ export function startPhaseRemotePolling() {
         const stale = Date.now() - ts > idleMs;
         if (stale && idleFiredForLastCommandMs !== ts) {
           idleFiredForLastCommandMs = ts;
-          forceIdleResumeStandardCycle();
+          /* Ne pas relancer le cycle si les phases sont en pause */
+          if (!data.phasesPaused) {
+            forceIdleResumeStandardCycle();
+          }
         }
         if (!stale) {
           idleFiredForLastCommandMs = null;

@@ -266,6 +266,8 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
                 parts.append(f'idle {snap.get("idleResumeMs")} ms')
             if 'theme' in data:
                 parts.append(f'thème→{snap.get("theme")}')
+            if 'pausePhases' in data:
+                parts.append('⏸ pause' if snap.get('phasesPaused') else '▶ reprise')
             remote_cmd(f'{" · ".join(parts) or "maj"} · seq {snap.get("seq")}')
             self._send_json(out)
             return

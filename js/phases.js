@@ -906,6 +906,27 @@ export function forceIdleResumeStandardCycle() {
   });
 }
 
+/**
+ * Pause / reprise du cycle visuel depuis la télécommande.
+ * Pause : arrête tout et masque les calques (fond + CRT continuent).
+ * Reprise : relance le cycle depuis le snake.
+ * @param {boolean} paused
+ */
+export function setPhasePaused(paused) {
+  if (paused) {
+    interruptAllPhases(() => { /* calques fermés — fond + CRT continuent, cycle suspendu */ });
+  } else {
+    /* Passer par interruptAllPhases pour s'assurer qu'aucune animation
+       de la pause précédente n'est encore en cours avant de redémarrer. */
+    interruptAllPhases(() => {
+      snakeCyclesDone = 0;
+      currentSnakeSetIndex = 0;
+      prepareSnakeSet();
+      playNextSnakeSticker();
+    });
+  }
+}
+
 function resumeSnakeAfterWebcam() {
   prepareSnakeSet();
   startVisualCycle();
