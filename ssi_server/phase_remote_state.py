@@ -13,6 +13,7 @@ _phase: str | None = None
 _video_index: int | None = None
 # Incrémenté seulement si le POST contient « phase » — pour que la page ne relance pas la phase à chaque POST fond.
 _phase_command_seq = 0
+_text_content: str | None = None
 
 # Fond scène (dégradé + vidéos backgrounds/)
 _bg_gradient_opacity: float | None = None
@@ -31,7 +32,7 @@ VALID_THEMES = frozenset({'ssi', 'diagonal'})
 # Pause du cycle visuel (phases) — fond + CRT continuent
 _phases_paused: bool = False
 
-VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam'})
+VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam', 'text'})
 
 # Ordre des boutons dans phase_panel.html / futurs clients — ajouter une phase : VALID_PHASES + ce tuple + libellé.
 PANEL_PHASE_ORDER: tuple[str, ...] = (
@@ -39,6 +40,7 @@ PANEL_PHASE_ORDER: tuple[str, ...] = (
     'super_boom',
     'os_video',
     'logo',
+    'text',
     'webcam',
 )
 
@@ -48,6 +50,7 @@ PANEL_PHASE_LABELS: dict[str, str] = {
     'os_video': 'Fenêtre vidéo',
     'logo': 'Logo',
     'webcam': 'Webcam',
+    'text': 'Texte',
 }
 
 # Indice vidéo obligatoire pour cette phase (extensible si d’autres phases en ont besoin).
@@ -147,6 +150,7 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'idleResumeMs': _idle_resume_ms,
         'theme': _theme,
         'phasesPaused': _phases_paused,
+        'textContent': _text_content,
     }
 
 
@@ -167,7 +171,8 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     """
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
     global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused
-
+    global _text_content
+    
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
 
@@ -176,15 +181,16 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_bg_opacity = 'bgGradientOpacity' in data
     has_bg_auto = 'backgroundAutoRotate' in data
     has_bg_index = 'backgroundVideoIndex' in data
+    has_text = 'textContent' in data
     has_idle_resume = 'idleResumeMs' in data
     has_theme = 'theme' in data
     has_pause = 'pausePhases' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
-            and not has_idle_resume and not has_theme and not has_pause:
+            and not has_idle_resume and not has_theme and not has_pause and not has_text:
         raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, '
-            'backgroundVideoIndex, idleResumeMs, theme'
+            'backgroundVideoIndex, idleResumeMs, theme, textContent'
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
@@ -253,6 +259,10 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
 
         if has_pause:
             _phases_paused = bool(data.get('pausePhases'))
+
+        if has_text:
+            tc = data.get('textContent')
+            _text_content = str(tc) if tc is not None else ''
 
         if not idle_only:
             _seq += 1

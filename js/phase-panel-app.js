@@ -16,6 +16,7 @@ const FALLBACK_PANEL_PHASES = [
   { id: 'os_video', label: 'Fenêtre vidéo', needsVideoIndex: true, hint: '' },
   { id: 'logo', label: 'Logo', needsVideoIndex: false, hint: '' },
   { id: 'webcam', label: 'Webcam', needsVideoIndex: false, hint: '' },
+  { id: 'text', label: 'Texte', needsVideoIndex: false, hint: '' },
 ];
 
 function timeShort() {
@@ -192,6 +193,7 @@ async function bootstrap() {
   const btnThemeSsi = document.getElementById('btnThemeSsi');
   const btnThemeDiagonal = document.getElementById('btnThemeDiagonal');
   const btnPausePhases = document.getElementById('btnPausePhases');
+  const textInputElement = /** @type {HTMLInputElement | null} */ (document.getElementById('panelTextInput'));
 
   if (
     !logEl ||
@@ -227,9 +229,12 @@ async function bootstrap() {
 
   const runPhase = async (p) => {
     const vi = p.needsVideoIndex ? getSelectedVideoIndex(videoSelect) : null;
-    log.append('cmd', `${p.label} (${p.id})`, vi != null ? `vidéo #${vi}` : '');
+    const body = { phase: p.id };
+    if (vi != null && Number.isFinite(vi)) body.videoIndex = vi;
+    if (p.id === 'text') body.textContent = textInputElement?.value ?? '';
+    log.append('cmd', `${p.label} (${p.id})`, vi != null ? `vidéo #${vi}` : body.textContent ?? '');
     try {
-      const res = await postPhase(p.id, vi);
+      const res = await postRemote(body);
       if (res.ok && res.json) {
         log.append('ok', `serveur seq=${res.json.seq}`, String(res.json.phase || ''));
         statusLine.textContent = `seq=${res.json.seq} · phase=${res.json.phase ?? '?'}`;

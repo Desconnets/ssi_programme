@@ -33,6 +33,7 @@ import {
   WEBCAM_WINDOW_MAX_HEIGHT_RATIO,
   WEBCAM_WINDOW_MAX_UPSCALE,
   WEBCAM_WINDOW_MAX_WIDTH_RATIO,
+  TEXT_PHASE_DURATION_MS,
 } from './config.js';
 import { random } from './utils.js';
 import { FALLBACK_STICKER_URL, bindStickerImage } from './sticker-fallback.js';
@@ -42,6 +43,7 @@ import { attachVideoLoadListeners } from './video-load-log.js';
 import { attachVideoLifecycle } from './video-lifecycle.js';
 import { abortBrowserMediaWarm } from './browser-cache-warm.js';
 import { startWebcamGrainLoop, stopWebcamGrainLoop } from './webcam-grain.js';
+import { closeTextPhase, startTextPhase } from './text-phase.js'; 
 
 const stickersLayer = document.getElementById('stickersLayer');
 const sceneEl = document.getElementById('scene');
@@ -820,6 +822,7 @@ function interruptAllPhases(done) {
     clearTimeout(logoTimer);
     logoTimer = null;
   }
+  closeTextPhase();
   clearWebcamTimers();
   clearOsWindowTimers();
   inSuperBoom = false;
@@ -855,43 +858,46 @@ function clampPhaseVideoIndex(idx) {
  * @param {string} phase snake | super_boom | os_video | logo | webcam
  * @param {number | null | undefined} [videoIndex] index dans la liste API phase-videos (os_video)
  */
-export function applyRemotePhaseCommand(phase, videoIndex) {
+export function applyRemotePhaseCommand(phase, videoIndex, text) {
   const p = String(phase || '')
     .toLowerCase()
     .replace(/-/g, '_');
-  const known = new Set(['snake', 'super_boom', 'os_video', 'logo', 'webcam']);
+    const known = new Set(['snake', 'super_boom', 'os_video', 'logo', 'webcam', 'text']);
+    debugWarn(phase, known);
   if (!known.has(p)) {
     debugWarn('[SSI] Télécommande phase inconnue :', phase);
     return;
   }
   interruptAllPhases(() => {
-    if (p === 'snake') {
-      snakeCyclesDone = 0;
-      currentSnakeSetIndex = 0;
-      prepareSnakeSet();
-      playNextSnakeSticker();
-      return;
-    }
-    if (p === 'super_boom') {
-      startSuperBoom();
-      return;
-    }
-    if (p === 'os_video') {
-      const url = phaseVideoUrls.length ? phaseVideoUrls[clampPhaseVideoIndex(videoIndex)] : null;
-      if (url) {
-        startOsWindowPhase({ forcedUrl: url });
-      } else {
-        reportLiveEvent('os_window_skip', { reason: 'telecommande_sans_video' });
-        startLogoPhase();
+    switch (p) {
+      case 'snake':
+        snakeCyclesDone = 0;
+        currentSnakeSetIndex = 0;
+        prepareSnakeSet();
+        playNextSnakeSticker();
+        break;
+      case 'super_boom':
+        startSuperBoom();
+        break;
+      case 'os_video': {
+        const url = phaseVideoUrls.length ? phaseVideoUrls[clampPhaseVideoIndex(videoIndex)] : null;
+        if (url) {
+          startOsWindowPhase({ forcedUrl: url });
+        } else {
+          reportLiveEvent('os_window_skip', { reason: 'telecommande_sans_video' });
+          startLogoPhase();
+        }
+        break;
       }
-      return;
-    }
-    if (p === 'logo') {
-      startLogoPhase();
-      return;
-    }
-    if (p === 'webcam') {
-      startWebcamPhase();
+      case 'logo':
+        startLogoPhase();
+        break;
+      case 'text':
+        startTextPhase(text ?? '', TEXT_PHASE_DURATION_MS, startWebcamPhase);
+        break;
+      case 'webcam':
+        startWebcamPhase();
+        break;
     }
   });
 }

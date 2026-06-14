@@ -77,7 +77,7 @@ export function startPhaseRemotePolling() {
           lastAppliedPhaseCommandSeq = pcs;
           const ph = data.phase;
           if (ph) {
-            applyRemotePhaseCommand(ph, data.videoIndex);
+            applyRemotePhaseCommand(ph, data.videoIndex, data.textContent);
           }
         }
       }

@@ -481,6 +481,42 @@ body.ssi-micro-audio #btnNext {
   transition: filter 0.45s ease-out;
 }
 
+/* Phase Text */
+#ssiTextPhaseLayer{
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+.ssi-text-phase-layer{
+  opacity: 0;
+}
+.ssi-text-phase-layer--open {
+  opacity: 1;
+}
+
+#ssiTextPhaseContent {
+  font-size: 6vw;
+  color: white;
+  text-shadow:0px 4px 2px #111111;
+  text-align: center;
+  font-family: inherit; /* or a custom font */
+  white-space: pre-line;
+  animation: floatScale 3.5s ease-in-out infinite;
+}
+
+@keyframes floatScale {
+  0%, 100% { 
+    transform: translateY(0px) scale(1);
+  }
+  50% { 
+    transform: translateY(-15px) scale(1.05);
+  }
+}
+
 /* Phase webcam : au-dessus de la fenêtre OS si les deux coexistaient (normalement exclusives) */
 .ssi-webcam-phase-layer {
   z-index: 61;

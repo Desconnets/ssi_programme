@@ -82,6 +82,8 @@ export const OS_WINDOW_PLAYING_RETRY_WATCHDOG_MS = 6500;
 export const LOGO_PHASE_DURATION_MS = 26000;
 /** Phase webcam (après logo) — durée puis retour snake ; pas de réglage serveur */
 export const WEBCAM_PHASE_DURATION_MS = 22000;
+/** Phase Text - durée puis retour snake */
+export const TEXT_PHASE_DURATION_MS = 10000;
 /** Phase « fausse fenêtre » : garde-fou si jamais `ended` ne part pas */
 export const OS_WINDOW_PHASE_MAX_MS = 600000;
 /**
