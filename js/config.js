@@ -79,7 +79,7 @@ export const OS_WINDOW_PLAY_WAIT_VISIBLE_MS = 12000;
 /** Après `play()` OK : si la vidéo reste en pause (fenêtre visible mais image figée), nouvel essai puis fichier suivant. */
 export const OS_WINDOW_PLAYING_WATCHDOG_MS = 10000;
 export const OS_WINDOW_PLAYING_RETRY_WATCHDOG_MS = 6500;
-export const LOGO_PHASE_DURATION_MS = 26000;
+export const LOGO_PHASE_DURATION_MS = 5000;
 /** Phase webcam (après logo) — durée puis retour snake ; pas de réglage serveur */
 export const WEBCAM_PHASE_DURATION_MS = 22000;
 /** Phase « fausse fenêtre » : garde-fou si jamais `ended` ne part pas */

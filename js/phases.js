@@ -42,6 +42,8 @@ import { attachVideoLoadListeners } from './video-load-log.js';
 import { attachVideoLifecycle } from './video-lifecycle.js';
 import { abortBrowserMediaWarm } from './browser-cache-warm.js';
 import { startWebcamGrainLoop, stopWebcamGrainLoop } from './webcam-grain.js';
+import { onPhaseEnded, startPhase } from './phase-manager.js';
+import { PHASE } from './phase-manager.js';
 
 const stickersLayer = document.getElementById('stickersLayer');
 const sceneEl = document.getElementById('scene');
@@ -255,7 +257,7 @@ function acquireWebcamStreamForPhase() {
   );
 }
 
-function prepareSnakeSet() {
+export function prepareSnakeSet() {
   const pool = allStickerUrls.slice();
   if (!pool.length) {
     snakeSet = [];
@@ -298,13 +300,22 @@ function animateStickersOut(callback) {
 
 function startVisualCycle() {
   if (inSuperBoom) return;
+  /* Prépare la file + précharge la 1ʳᵉ vidéo tout de suite (durée = SUPER_BOOM_DURATION_MS dans config) */
+  if (phaseVideoUrls.length) {
+    const q = shuffleInPlace(phaseVideoUrls.slice());
+    osWindowPreparedQueue = q;
+    prefetchOsWindowVideoUrl(q[0]);
+    debugLog('[PHASE·VIDÉO] Préchargement —', liveShortName(q[0]), '(pendant le Boom,', q.length, 'vidéo(s) en file)');
+  } else {
+    osWindowPreparedQueue = null;
+  }
   if (!snakeSet.length && allStickerUrls.length) {
     prepareSnakeSet();
   }
-  playNextSnakeSticker();
+  startPhase(PHASE.SNAKE);
 }
 
-function playNextSnakeSticker() {
+export function playNextSnakeSticker() {
   if (snakeTimer) {
     clearTimeout(snakeTimer);
     snakeTimer = null;
@@ -313,7 +324,7 @@ function playNextSnakeSticker() {
   if (!snakeSet.length) return;
 
   if (snakeCyclesDone >= 3) {
-    animateStickersOut(() => startSuperBoom());
+    animateStickersOut(onPhaseEnded);
     return;
   }
 
@@ -330,9 +341,7 @@ function playNextSnakeSticker() {
     currentSnakeSetIndex = (currentSnakeSetIndex + 1) % snakeSet.length;
     snakeCyclesDone += 1;
 
-    snakeTimer = setTimeout(() => {
-      playNextSnakeSticker();
-    }, SNAKE_STICKER_LIFETIME_MS);
+    snakeTimer = setTimeout(playNextSnakeSticker, SNAKE_STICKER_LIFETIME_MS);
   });
 }
 
@@ -519,24 +528,16 @@ function playOsWindowVideoResilient(video, isStale, onPlaying, onGiveUp) {
   attempt(0);
 }
 
-function startSuperBoom() {
+export function startSuperBoom() {
   inSuperBoom = true;
   if (!stickersLayer) return;
+
+  clearStickers();
 
   /* Libère le serveur Python : plus de fetch warm en parallèle quand la vidéo va être demandée */
   abortBrowserMediaWarm();
 
   reportLiveEvent('super_boom', { nombre: allStickerUrls.length });
-
-  /* Prépare la file + précharge la 1ʳᵉ vidéo tout de suite (durée = SUPER_BOOM_DURATION_MS dans config) */
-  if (phaseVideoUrls.length) {
-    const q = shuffleInPlace(phaseVideoUrls.slice());
-    osWindowPreparedQueue = q;
-    prefetchOsWindowVideoUrl(q[0]);
-    debugLog('[PHASE·VIDÉO] Préchargement —', liveShortName(q[0]), '(pendant le Boom,', q.length, 'vidéo(s) en file)');
-  } else {
-    osWindowPreparedQueue = null;
-  }
 
   allStickerUrls.forEach((url, idx) => {
     const img = document.createElement('img');
@@ -575,7 +576,7 @@ function startSuperBoom() {
   superBoomTimer = setTimeout(() => {
     inSuperBoom = false;
     clearStickers();
-    startOsWindowPhase();
+    onPhaseEnded();
   }, SUPER_BOOM_DURATION_MS);
 }
 
@@ -869,29 +870,29 @@ export function applyRemotePhaseCommand(phase, videoIndex) {
       snakeCyclesDone = 0;
       currentSnakeSetIndex = 0;
       prepareSnakeSet();
-      playNextSnakeSticker();
+      startPhase(PHASE.SNAKE);
       return;
     }
     if (p === 'super_boom') {
-      startSuperBoom();
+      startPhase(PHASE.SUPER_BOOM);
       return;
     }
     if (p === 'os_video') {
       const url = phaseVideoUrls.length ? phaseVideoUrls[clampPhaseVideoIndex(videoIndex)] : null;
       if (url) {
-        startOsWindowPhase({ forcedUrl: url });
+        startPhase(PHASE.VIDEO, {forcedUrl: url})
       } else {
         reportLiveEvent('os_window_skip', { reason: 'telecommande_sans_video' });
-        startLogoPhase();
+        startPhase(PHASE.LOGO);
       }
       return;
     }
     if (p === 'logo') {
-      startLogoPhase();
+      startPhase(PHASE.LOGO);
       return;
     }
     if (p === 'webcam') {
-      startWebcamPhase();
+      startPhase(PHASE.WEBCAM);
     }
   });
 }
@@ -928,7 +929,7 @@ export function setPhasePaused(paused) {
 }
 
 function resumeSnakeAfterWebcam() {
-  prepareSnakeSet();
+  //prepareSnakeSet();
   startVisualCycle();
 }
 
@@ -937,7 +938,7 @@ function resumeSnakeAfterWebcam() {
  * Si refus / pas de caméra : skip + télémétrie, retour snake. Nouveau getUserMedia seulement
  * pour les tours suivants du cycle (souvent sans nouvelle boîte de dialogue).
  */
-function startWebcamPhase() {
+export function startWebcamPhase() {
   clearWebcamTimers();
   hideWebcamLayerImmediate();
   webcamGeneration += 1;
@@ -1000,7 +1001,7 @@ function startWebcamPhase() {
           webcamPhaseTimer = setTimeout(() => {
             if (gen !== webcamGeneration) return;
             hideWebcamLayerAnimated(() => {
-              resumeSnakeAfterWebcam();
+              onPhaseEnded();
             });
           }, WEBCAM_PHASE_DURATION_MS);
         })
@@ -1009,7 +1010,7 @@ function startWebcamPhase() {
           reportLiveEvent('webcam_phase_skip', { reason: 'play_refusé' });
           debugLog('[SSI] Phase webcam : lecture refusée → snake');
           hideWebcamLayerImmediate();
-          resumeSnakeAfterWebcam();
+          onPhaseEnded();
         });
     };
 
@@ -1024,20 +1025,20 @@ function startWebcamPhase() {
 /**
  * @param {{ forcedUrl?: string | null }} [opts] forcedUrl — vidéo imposée (télécommande), sinon file comme après Super Boom.
  */
-function startOsWindowPhase(opts = {}) {
+export function startOsWindowPhase(opts = {}) {
   const forcedUrl =
     typeof opts.forcedUrl === 'string' && opts.forcedUrl.length > 0 ? opts.forcedUrl : null;
 
   if (!forcedUrl && !phaseVideoUrls.length) {
     reportLiveEvent('os_window_skip', { reason: 'aucune_vidéo' });
     debugLog('[SSI] Phase fenêtre OS : aucun fichier dans phase_videos/ → enchaînement logo');
-    startLogoPhase();
+    onPhaseEnded();
     return;
   }
   if (!osWindowLayer || !osWindowVideo) {
     reportLiveEvent('os_window_skip', { reason: 'dom_manquant' });
     debugWarn('[SSI] Phase fenêtre OS : #ssiOsWindowLayer ou vidéo absent');
-    startLogoPhase();
+    onPhaseEnded();
     return;
   }
 
@@ -1318,10 +1319,10 @@ function startOsWindowPhase(opts = {}) {
   tryOne();
 }
 
-function startLogoPhase() {
+export function startLogoPhase() {
   clearStickers();
   if (!logoUrl) {
-    startWebcamPhase();
+    onPhaseEnded();
     return;
   }
 
@@ -1362,7 +1363,7 @@ function startLogoPhase() {
 
   logoTimer = setTimeout(() => {
     clearStickers();
-    startWebcamPhase();
+    onPhaseEnded();
   }, LOGO_PHASE_DURATION_MS);
 }
 
