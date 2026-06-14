@@ -1,4 +1,5 @@
-import { prepareSnakeSet, playNextSnakeSticker, startSuperBoom, startOsWindowPhase, startLogoPhase, startWebcamPhase } from "./phases.js";
+import { LOGO_PHASE_DURATION_MS, SUPER_BOOM_DURATION_MS } from "./config.js";
+import { prepareSnakeSet, playNextSnakeSticker, startSuperBoom, startOsWindowPhase, startLogoPhase, startWebcamPhase, stopSuperBoom, stopLogoPhase } from "./phases.js";
 
 export const PHASE = Object.freeze({
   SNAKE:        'snake',
@@ -20,20 +21,27 @@ export const DEFAULT_PHASE = PHASE.SNAKE;
 
 export let currentPhase = PHASE.SNAKE;
 
+let currentPhaseTimeout = null;
+
 export function startPhase(phase, params){
+    if(currentPhaseTimeout){
+        clearTimeout(currentPhaseTimeout);
+        currentPhaseTimeout = null;
+    }
     switch(phase){
         case PHASE.SNAKE:
-            //prepareSnakeSet();
             playNextSnakeSticker();
             break;
         case PHASE.SUPER_BOOM:
             startSuperBoom();
+            currentPhaseTimeout = setTimeout(stopSuperBoom, SUPER_BOOM_DURATION_MS);
             break;
         case PHASE.VIDEO:
             startOsWindowPhase();
             break;
         case PHASE.LOGO:
             startLogoPhase();
+            currentPhaseTimeout = setTimeout(stopLogoPhase, LOGO_PHASE_DURATION_MS);
             break;
         case PHASE.WEBCAM:
             startWebcamPhase();
@@ -41,6 +49,9 @@ export function startPhase(phase, params){
     }
 }
 
+/**
+ * Switches to the next phase and loop back to first one once phase list ended
+ */
 export function onPhaseEnded(){
     const idx = PHASE_ORDER.indexOf(currentPhase);
     const next = PHASE_ORDER[(idx + 1) % PHASE_ORDER.length];

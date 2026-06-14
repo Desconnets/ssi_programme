@@ -60,9 +60,7 @@ let snakeSet = [];
 let currentSnakeSetIndex = 0;
 let snakeCyclesDone = 0;
 let snakeTimer = null;
-let superBoomTimer = null;
 let inSuperBoom = false;
-let logoTimer = null;
 let logoUrl = null;
 
 /** @type {string[]} URLs /api/phase-videos — dossier phase_videos/ */
@@ -567,17 +565,12 @@ export function startSuperBoom() {
     img.style.opacity = '1';
     stickersLayer.appendChild(img);
   });
+}
 
-  if (superBoomTimer) {
-    clearTimeout(superBoomTimer);
-    superBoomTimer = null;
-  }
-
-  superBoomTimer = setTimeout(() => {
-    inSuperBoom = false;
-    clearStickers();
-    onPhaseEnded();
-  }, SUPER_BOOM_DURATION_MS);
+export function stopSuperBoom(){
+  inSuperBoom = false;
+  clearStickers();
+  onPhaseEnded();
 }
 
 function clearOsWindowLoadTimer() {
@@ -812,14 +805,6 @@ function interruptAllPhases(done) {
   if (snakeTimer) {
     clearTimeout(snakeTimer);
     snakeTimer = null;
-  }
-  if (superBoomTimer) {
-    clearTimeout(superBoomTimer);
-    superBoomTimer = null;
-  }
-  if (logoTimer) {
-    clearTimeout(logoTimer);
-    logoTimer = null;
   }
   clearWebcamTimers();
   clearOsWindowTimers();
@@ -1060,16 +1045,16 @@ export function startOsWindowPhase(opts = {}) {
   const maxAttempts = Math.min(queue.length, OS_WINDOW_MAX_LOAD_ATTEMPTS);
   let attemptIndex = 0;
 
-  const goLogoAfterExhausted = () => {
+  const stopAfterExhausted = () => {
     reportLiveEvent('os_window_skip', { reason: 'épuisement_tentatives' });
     debugLog('[PHASE·VIDÉO] ✗ Toutes les tentatives épuisées → enchaînement logo');
     hideOsWindowLayerImmediate();
-    startLogoPhase();
+    onPhaseEnded();
   };
 
   const tryOne = () => {
     if (attemptIndex >= maxAttempts) {
-      goLogoAfterExhausted();
+      stopAfterExhausted();
       return;
     }
 
@@ -1102,6 +1087,7 @@ export function startOsWindowPhase(opts = {}) {
       }
     };
 
+    /** When video is finished */
     const completePhase = (reason) => {
       if (phaseFinishing) return;
       if (gen !== osWindowLoadGeneration) return;
@@ -1110,7 +1096,7 @@ export function startOsWindowPhase(opts = {}) {
       clearOsWindowTimers();
       hideOsWindowLayerAnimated(() => {
         debugLog('[PHASE·VIDÉO] Fin —', reason, '—', liveShortName(url));
-        startLogoPhase();
+        onPhaseEnded();
       });
     };
 
@@ -1355,16 +1341,11 @@ export function startLogoPhase() {
   img.style.transform = 'translate(-50%, -50%) scale(1)';
   img.style.opacity = '1';
   stickersLayer.appendChild(img);
+}
 
-  if (logoTimer) {
-    clearTimeout(logoTimer);
-    logoTimer = null;
-  }
-
-  logoTimer = setTimeout(() => {
-    clearStickers();
-    onPhaseEnded();
-  }, LOGO_PHASE_DURATION_MS);
+export function stopLogoPhase(){
+  clearStickers();
+  onPhaseEnded();
 }
 
 /**
