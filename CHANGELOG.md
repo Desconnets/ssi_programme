@@ -1,5 +1,31 @@
 # Changelog
 
+## [Juin 2026] — Audit + documentation + identité du programme
+
+| Sujet | Détail |
+|--------|--------|
+| **Identité du programme** | Renommé « Programme de scène live SSI & Diagonal Cinéma ». `index.html` : titre « SSI — Scène Live ». `phase_panel.html` : « SSI / Diagonal — Télécommande live ». `README.md` : intro complète avec schéma d'architecture et description des deux thèmes. |
+| **Nouveau guide architecture** | `docs/architecture.md` — décrit tout le système (serveur, scène, télécommande, poll, thèmes, dossiers médias) pour toute personne reprenant le code. |
+| **En-têtes fichiers** | `phases.js`, `phase_remote_state.py`, `handler.py`, `audio.js` : docstrings mis à jour avec le rôle précis, le guide d'extension, et les sections du fichier. |
+| **Audit nettoyage** | Références mortes supprimées : routes `/api/tracks` `/api/virgules` `/api/settings`, 13 handlers d'events playlist, compteurs tracks/virgules dans health, `AUDIO_EXT` dans handler, pattern `/api/settings` dans QUIET_OK, `playlist-order.js`, fonctions audio mortes dans `normalize.py`. |
+| **Améliorations lisibilité** | `handler.py` `_print_live_event` : 70 lignes → dict `_LIVE_EVENTS` (1 ligne par event, extensible). `phases.js` : 9 sections `═══` pour naviguer dans le fichier de 1 430 lignes. |
+
+---
+
+## [Juin 2026] — Archivage playlist + vidéos avec audio
+
+| Sujet | Détail |
+|--------|--------|
+| **Playlist archivée** | Mode Playlist (musique/, virgules/, mini-contrôles) mis en veille. Code complet dans `archive/playlist-mode/` (audio.js, api.js, main.js, playlist-order.js, runtime_config.py, index.html). Réactivable : voir `archive/playlist-mode/README.txt`. |
+| **Mode micro exclusif** | Le serveur démarre toujours en mode micro — plus de prompt `[1] Playlist / [2] Micro`. `ssi_server/runtime_config.py` simplifié (retourne toujours `'micro'`). Normalisation `musique/` + `virgules/` supprimée du démarrage. |
+| **Mini-contrôles retirés** | Boutons prev/play/next/fullscreen supprimés de `index.html` et `style.css`. Code archivé. |
+| **Vidéos avec audio** | `phase_video_convert.py` conserve désormais la piste audio lors de la conversion (flag `-an` retiré). Les nouvelles vidéos déposées dans `phase_videos/` gardent leur son. |
+| **Bouton Muet télécommande** | Case à cocher **🔇 Muet** dans la section Vidéo de `phase_panel.html`. POST `{ videoMuted: true/false }` → appliqué en temps réel via `phase-remote.js` → `setOsWindowVideoMuted()` dans `phases.js`. Muet par défaut (`videoMuted: true`). |
+| **Nettoyage config.js** | Constantes playlist (JINGLE_*, MUSIC_*, TRACKS_PER_JINGLE, PLAYLIST_*) archivées. `browser-cache-warm.js` simplifié (plus de warm virgules/tracks). |
+| **Audit** | Suppression des imports morts (`normalize.py`, `prompt_audio_input_choice`, constantes playlist), unification du warm cache. |
+
+---
+
 > **Dernière mise à jour : avril 2026** — voir aussi `ROADMAP.md` pour les étapes techniques et `README.md` pour l'usage.
 
 ---

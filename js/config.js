@@ -65,9 +65,7 @@ export const BROWSER_PREWARM_BACKGROUNDS = true;
  * À désactiver si les vidéos font > 30 Mo ou si le warm bloque trop longtemps au démarrage.
  */
 export const BROWSER_PREWARM_PHASE_VIDEOS = true;
-export const BROWSER_PREWARM_VIRGULES = true;
-/** Nombre max de pistes `musique/` à précharger (0 = aucune — les MP3 sont lourds). */
-export const BROWSER_PREWARM_MAX_TRACKS = 0;
+// BROWSER_PREWARM_VIRGULES et BROWSER_PREWARM_MAX_TRACKS archivés (playlist désactivée)
 
 /**
  * Si play() échoue avec « paused to save power » (Chrome, onglet arrière-plan / vidéo seule) : nouvelles tentatives.
@@ -112,37 +110,7 @@ export const WEBCAM_WINDOW_MAX_WIDTH_RATIO = 0.96;
 export const WEBCAM_WINDOW_MAX_HEIGHT_RATIO = 0.9;
 export const WEBCAM_WINDOW_MAX_UPSCALE = 1.65;
 
-// Transitions audio — déclenchement du morceau suivant X s avant la fin (chevauchement temporel)
-export const JINGLE_TO_MUSIC_OVERLAP_SEC = 0.85;
-export const MUSIC_TO_MUSIC_OVERLAP_SEC = 0.7;
-export const MUSIC_TO_JINGLE_OVERLAP_SEC = 0.35;
-export const TRACKS_PER_JINGLE = 3;
-
-// Fondus (ms) — musique : crossfade entre deux morceaux ; virgule : à peine perceptible
-export const MUSIC_CROSSFADE_MS = 1100;
-export const MUSIC_FADE_IN_FIRST_MS = 900;
-export const JINGLE_FADE_IN_MS = 220;
-export const JINGLE_FADE_OUT_MS = 260;
-export const JINGLE_MUSIC_CROSSFADE_MS = 580;
-export const MUSIC_DUCK_FOR_JINGLE_MS = 380;
-
-/**
- * Ordre de lecture des fichiers `musique/` (un tour = chaque piste une fois, puis nouveau tour).
- *
- * - `'shuffle_once'` — mélange aléatoire à chaque fin de tour (défaut).
- * - `'api_order'` — même ordre que renvoie le serveur (`GET /api/tracks`), en boucle.
- * - `'custom'` — ordre défini par `PLAYLIST_CUSTOM_ORDER` (indices 0 = 1ʳᵉ URL API, etc.).
- *
- * Pour changer plus tard : modifier ici, ou étendre le serveur pour renvoyer ce réglage dans `/api/settings`.
- */
-export const PLAYLIST_ORDER_MODE = /** @type {'shuffle_once' | 'api_order' | 'custom'} */ ('shuffle_once');
-
-/**
- * Mode `'custom'` uniquement : indices des pistes dans l’ordre souhaité.
- * Exemple avec 3 morceaux : `[2, 0, 1]` joue d’abord la 3ᵉ URL API, puis la 1ʳᵉ, puis la 2ᵉ.
- * Les indices invalides ou en double sont ignorés ; les pistes oubliées sont ajoutées à la fin (ordre API).
- */
-export const PLAYLIST_CUSTOM_ORDER = /** @type {number[]} */ ([]);
+// Constantes playlist archivées dans archive/playlist-mode/ (JINGLE_*, MUSIC_*, TRACKS_PER_JINGLE, PLAYLIST_*)
 
 // Lissage visuel stickers
 export const SMOOTH_POS = 0.055;

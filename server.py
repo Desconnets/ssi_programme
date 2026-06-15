@@ -1,12 +1,11 @@
-2#!/usr/bin/env python3
+#!/usr/bin/env python3
 """
-Lanceur : toute la logique est dans le package ssi_server/.
+Lanceur — toute la logique est dans le package ssi_server/.
 
-  python3 server.py
-
-Alternative :
-
-  python3 -m ssi_server
+Lancement :
+    python3 server.py
+    python3 -m ssi_server     (équivalent)
+    Double-clic Lancer.command (macOS)
 """
 from ssi_server.main import main
 

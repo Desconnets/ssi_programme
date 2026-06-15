@@ -1,7 +1,21 @@
 /**
- * Phases visuelles : SNAKE → SUPER_BOOM → FENÊTRE_OS+VIDÉO → LOGO → WEBCAM → SNAKE (boucle).
- * Préchargement : warm HTTP centralisé dans `browser-cache-warm.js` (main) + vidéo cachée dès l’init ; prefetch au Super boom.
- * État interne : timers + URLs ; le calque DOM est #stickersLayer.
+ * Moteur des phases visuelles — cœur du programme de scène live SSI / Diagonal Cinéma.
+ *
+ * Cycle automatique : SNAKE → SUPER BOOM → FENÊTRE VIDÉO → LOGO → WEBCAM → (reboucle)
+ * Chaque phase peut aussi être déclenchée manuellement depuis la télécommande web.
+ *
+ * Sections du fichier (repères visuels ═══) :
+ *   CONFIG          — réglages boucle vidéo, mute
+ *   WEBCAM          — permission micro caméra anticipée
+ *   PHASE SNAKE     — stickers en file indienne (15 segments, 3 tours avant boom)
+ *   PHASE SUPER BOOM — explosion de stickers (~10 s)
+ *   PHASE FENÊTRE VIDÉO — fausse fenêtre OS lisant phase_videos/
+ *   PHASE WEBCAM    — flux caméra live (~22 s)
+ *   PHASE LOGO      — logo centré (~26 s)
+ *   TÉLÉCOMMANDE    — applyRemotePhaseCommand(), guide pour ajouter une phase
+ *   INIT & EXPORTS  — initStickers(), initPhaseVideos(), etc.
+ *
+ * Pour ajouter une phase : voir la section TÉLÉCOMMANDE et docs/remote-panel.md.
  */
 import {
   STICKER_MIN_SIZE,
@@ -72,9 +86,29 @@ let phaseVideoUrls = [];
  */
 let _osWindowMinLoopMs = 0;
 
+/**
+ * Son des vidéos phase_videos — muet par défaut, changé via setOsWindowVideoMuted().
+ */
+let _osWindowVideoMuted = true;
+
 /** @param {number} ms */
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONFIG — durée boucle vidéo, mute vidéo
+// ═══════════════════════════════════════════════════════════════════════════
 export function setOsWindowMinLoopMs(ms) {
   _osWindowMinLoopMs = typeof ms === 'number' && ms > 0 ? ms : 0;
+}
+
+/**
+ * Mute / son pour les vidéos de la phase fenêtre OS.
+ * Appelé par phase-remote.js quand `videoMuted` change dans l'état serveur.
+ * @param {boolean} muted
+ */
+export function setOsWindowVideoMuted(muted) {
+  _osWindowVideoMuted = Boolean(muted);
+  if (osWindowVideo) {
+    osWindowVideo.muted = _osWindowVideoMuted;
+  }
 }
 /**
  * File aléatoire pour la phase fenêtre OS, préparée au début du SUPER BOOM
@@ -158,6 +192,9 @@ function hasLiveWebcamVideoTrack(stream) {
  * @param {boolean} afterUserGesture Mettre true au 1er clic si la 1ʳᵉ tentative sans geste a échoué (NotAllowed).
  * @returns {Promise<boolean>}
  */
+// ═══════════════════════════════════════════════════════════════════════════
+//  WEBCAM — permission anticipée
+// ═══════════════════════════════════════════════════════════════════════════
 export function requestWebcamPermissionEarly(afterUserGesture = false) {
   if (hasLiveWebcamVideoTrack(webcamPrefetchedStream)) {
     return Promise.resolve(true);
@@ -255,6 +292,9 @@ function acquireWebcamStreamForPhase() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  PHASE SNAKE
+// ═══════════════════════════════════════════════════════════════════════════
 function prepareSnakeSet() {
   const pool = allStickerUrls.slice();
   if (!pool.length) {
@@ -519,6 +559,9 @@ function playOsWindowVideoResilient(video, isStale, onPlaying, onGiveUp) {
   attempt(0);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  PHASE SUPER BOOM
+// ═══════════════════════════════════════════════════════════════════════════
 function startSuperBoom() {
   inSuperBoom = true;
   if (!stickersLayer) return;
@@ -579,6 +622,10 @@ function startSuperBoom() {
   }, SUPER_BOOM_DURATION_MS);
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  PHASE FENÊTRE VIDÉO (OS window)
+//  Pour ajouter un comportement : modifier startOsWindowPhase()
+// ═══════════════════════════════════════════════════════════════════════════
 function clearOsWindowLoadTimer() {
   if (osWindowLoadTimer) {
     clearTimeout(osWindowLoadTimer);
@@ -855,6 +902,11 @@ function clampPhaseVideoIndex(idx) {
  * @param {string} phase snake | super_boom | os_video | logo | webcam
  * @param {number | null | undefined} [videoIndex] index dans la liste API phase-videos (os_video)
  */
+// ═══════════════════════════════════════════════════════════════════════════
+//  TÉLÉCOMMANDE — commandes distantes (phase-remote.js → ici)
+//  Ajouter une phase : VALID_PHASES + PANEL_PHASE_* dans phase_remote_state.py
+//  + un cas dans applyRemotePhaseCommand() + startXxxPhase() ici
+// ═══════════════════════════════════════════════════════════════════════════
 export function applyRemotePhaseCommand(phase, videoIndex) {
   const p = String(phase || '')
     .toLowerCase()
@@ -937,6 +989,9 @@ function resumeSnakeAfterWebcam() {
  * Si refus / pas de caméra : skip + télémétrie, retour snake. Nouveau getUserMedia seulement
  * pour les tours suivants du cycle (souvent sans nouvelle boîte de dialogue).
  */
+// ═══════════════════════════════════════════════════════════════════════════
+//  PHASE WEBCAM
+// ═══════════════════════════════════════════════════════════════════════════
 function startWebcamPhase() {
   clearWebcamTimers();
   hideWebcamLayerImmediate();
@@ -1197,8 +1252,8 @@ function startOsWindowPhase(opts = {}) {
         completePhase('ended');
       };
 
-      osWindowVideo.muted = true;
-      osWindowVideo.defaultMuted = true;
+      osWindowVideo.muted = _osWindowVideoMuted;
+      osWindowVideo.defaultMuted = _osWindowVideoMuted;
       try {
         osWindowVideo.playsInline = true;
       } catch (_) {}
@@ -1318,6 +1373,9 @@ function startOsWindowPhase(opts = {}) {
   tryOne();
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+//  PHASE LOGO
+// ═══════════════════════════════════════════════════════════════════════════
 function startLogoPhase() {
   clearStickers();
   if (!logoUrl) {
@@ -1372,6 +1430,9 @@ function startLogoPhase() {
 /**
  * @param {string[]} urls URLs renvoyées par GET /api/phase-videos
  */
+// ═══════════════════════════════════════════════════════════════════════════
+//  INIT & EXPORTS
+// ═══════════════════════════════════════════════════════════════════════════
 export function initPhaseVideos(urls) {
   phaseVideoUrls = (urls || []).filter((u) => typeof u === 'string' && u.length > 0);
   debugLog('[SSI] phase_videos :', phaseVideoUrls.length, 'fichier(s) — chargement pendant le Super Boom');

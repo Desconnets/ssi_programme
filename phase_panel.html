@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSI — Télécommande phases</title>
+  <title>SSI / Diagonal — Télécommande live</title>
   <style>
     :root {
       color-scheme: dark light;
@@ -322,6 +322,10 @@
           <select id="panelVideoSelect" aria-label="Vidéo phase_videos"></select>
           <button type="button" class="secondary" id="btnPanelRefresh">Rafraîchir liste</button>
         </div>
+        <label class="panel-check">
+          <input type="checkbox" id="panelVideoMuted" checked />
+          🔇 Muet (décocher pour activer le son de la vidéo)
+        </label>
       </section>
 
       <section class="panel-section" aria-labelledby="lbl-bg">

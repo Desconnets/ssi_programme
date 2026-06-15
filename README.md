@@ -1,9 +1,37 @@
-# Playlist visuelle interactive — SSI & Diagonal Cinéma
+# Programme de scène live — SSI & Diagonal Cinéma
 
-> Scène **16:9** pilotée par le son pour événements live. Playlist audio + effets visuels réactifs (Web Audio API), stickers animés, fond vidéo, overlay CRT.  
-> **Télécommande web** : phases, fond, thème identité (SSI ou Diagonal Cinéma), reprise auto configurable.
+> Outil de performance visuelle **16:9** pour les soirées **Salut Salut Internet (SSI)** et **Diagonal Cinéma** (Les Valseurs).
 
-Développé pour les soirées **SSI** et **Diagonal Cinéma** (Les Valseurs) — deux identités visuelles distinctes switchables en un clic.
+La scène réagit au son ambiant capté par le micro et enchaîne automatiquement des phases visuelles (stickers, explosions, fenêtre vidéo, logo, webcam). L'opérateur pilote l'ensemble depuis une **télécommande web** sur un second onglet ou appareil.
+
+---
+
+## Comment ça marche
+
+```
+┌─────────────────────────────────────────────────────────┐
+│           python3 server.py                             │
+│  • Convertit les vidéos (MP4 H.264)                     │
+│  • Sert index.html + JS + médias                        │
+│  • Expose /api/phase-remote (état partagé)              │
+└────────────────┬────────────────┬───────────────────────┘
+                 │                │
+        Scène (index.html)   Télécommande (phase_panel.html)
+        • Micro → effets      • Boutons phases
+        • Cycle visuel auto   • Thème SSI / Diagonal
+        • Poll 450 ms         • Mute vidéo / Pause
+                 │                │
+                 └── GET /api/phase-remote ──► état lu/écrit
+```
+
+**Cycle visuel automatique :**
+```
+SNAKE (~30 s × 3 tours) → SUPER BOOM (~10 s) → FENÊTRE VIDÉO → LOGO (~26 s) → WEBCAM (~22 s) → reboucle
+```
+
+**Deux thèmes d'identité** (switchables en un clic depuis la télécommande) :
+- **SSI** — violet `#6b00dd`, turquoise `#02d1ae`, rose `#ff309c`, jaune `#ffde01`
+- **Diagonal Cinéma** — rose `#f040b0`, noir `#000`, blanc `#fff` (style *Samuel*, Émilie Tronche / Les Valseurs)
 
 ---
 
@@ -12,9 +40,11 @@ Développé pour les soirées **SSI** et **Diagonal Cinéma** (Les Valseurs) —
 | Fichier | Contenu |
 |---------|---------|
 | **`README.md`** | Ce fichier : installation, dossiers, lancement, API. |
-| **`CHANGELOG.md`** | Journal complet des évolutions, architecture `js/` et `ssi_server/`, charte couleurs. |
+| **`docs/architecture.md`** | **Guide technique** : comment tout le système fonctionne — lire en premier si on reprend le code. |
+| **`docs/file-index.md`** | **Index complet** de tous les fichiers (JS, Python, HTML, CSS) avec leur rôle et quand les modifier. |
+| **`docs/remote-panel.md`** | Ajouter des phases / champs POST / logs serveur. |
+| **`CHANGELOG.md`** | Journal complet des évolutions. |
 | **`ROADMAP.md`** | Étapes techniques réalisées + pistes optionnelles. |
-| **`docs/remote-panel.md`** | Guide d’extension de la télécommande (nouvelles phases, champs POST, logs). |
 
 ---
 

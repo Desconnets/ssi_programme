@@ -12,13 +12,7 @@ body {
   overflow: hidden;
 }
 
-/* Pendant le fetch des listes API (premier chargement) : pas de clic play sur playlist encore vide */
-html.ssi-app-init-pending .mini-controls-hud .mini-controls {
-  pointer-events: none;
-  opacity: 0.45;
-  cursor: wait;
-}
-
+/* Pendant le fetch initial : mini-contrôles grisés */
 html.ssi-app-init-pending #startHint {
   cursor: wait;
 }
@@ -40,89 +34,6 @@ html.ssi-app-init-pending #startHint {
   max-width: 177.78vh;   /* 16/9 * 100vh */
   max-height: 56.25vw;   /* 9/16 * 100vw */
   overflow: hidden;
-}
-
-/* ----- Mini-contrôles audio (bas droite) — masqués par défaut, dev : survol zone + 2 s après sortie ----- */
-.mini-controls-hud {
-  position: absolute;
-  right: 0;
-  bottom: 0;
-  padding: 12px 20px 20px 48px;
-  z-index: 65;
-  display: flex;
-  align-items: flex-end;
-  justify-content: flex-end;
-  /* Zone invisible pour réactiver le lecteur sans viser les boutons */
-  min-width: 140px;
-  min-height: 72px;
-}
-
-.mini-controls-hud .mini-controls {
-  position: relative;
-  right: auto;
-  bottom: auto;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.35s ease;
-}
-
-.mini-controls-hud.is-visible .mini-controls {
-  opacity: 1;
-  pointer-events: auto;
-}
-
-/* Mode micro (choix au lancement Python) : pas de lecteur playlist, garde le plein écran */
-body.ssi-micro-audio #btnPrev,
-body.ssi-micro-audio #btnPlayPause,
-body.ssi-micro-audio #btnNext {
-  display: none !important;
-}
-
-.mini-controls {
-  display: flex;
-  gap: 6px;
-  padding: 6px 8px;
-  background: rgba(5, 5, 15, 0.7);
-  border-radius: 999px;
-  box-shadow: 0 4px 14px rgba(0,0,0,0.55);
-  border: 1px solid rgba(255,255,255,0.25);
-  backdrop-filter: blur(8px);
-  align-items: center;
-  justify-content: center;
-}
-
-.mini-btn {
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  border: none;
-  padding: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 15px;
-  background: rgba(255,255,255,0.12);
-  color: #f5f5ff;
-  cursor: pointer;
-  transition: background 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
-  opacity: 0.78;
-}
-
-.mini-btn:hover {
-  background: rgba(255,255,255,0.26);
-  transform: translateY(-1px);
-  opacity: 1;
-}
-
-.mini-btn:active {
-  transform: translateY(0);
-  background: rgba(255,255,255,0.4);
-}
-
-.mini-btn-small {
-  width: 24px;
-  height: 24px;
-  font-size: 13px;
 }
 
 /* ----- Fond animé Y2K ----- */
@@ -1048,35 +959,7 @@ body.ssi-micro-audio #btnNext {
    le style croquis rapide de la série Samuel (Émilie Tronche).
    Le grain canvas existant renforce l'aspect papier/texture.    */
 
-/* Surcharge le filtre Kodak warm existant → croquis B&W */
-[data-app-theme="diagonal"] .ssi-webcam-shell .ssi-os-video {
-  filter:
-    grayscale(1)
-    contrast(3.2)
-    brightness(1.18) !important;
-}
-
-/* Overlay VHS neutralisé → scanlines légères + vignette, sans teintes */
-[data-app-theme="diagonal"] .ssi-webcam-phase-layer .ssi-vhs-overlay {
-  mix-blend-mode: multiply;
-  opacity: 0.55;
-  background:
-    repeating-linear-gradient(
-      180deg,
-      rgba(0, 0, 0, 0.06) 0px,
-      rgba(0, 0, 0, 0.06) 1px,
-      transparent 1px,
-      transparent 5px
-    ),
-    radial-gradient(
-      ellipse 88% 82% at 50% 48%,
-      transparent 36%,
-      rgba(0, 0, 0, 0.22) 68%,
-      rgba(0, 0, 0, 0.62) 100%
-    );
-  animation: none;
-  box-shadow: none;
-}
+/* Webcam Diagonal : rendu identique à SSI (filtre Kodak warm, overlay VHS standard) */
 
 /* Bandeau opérateur — Diagonal */
 [data-app-theme="diagonal"] .live-status {

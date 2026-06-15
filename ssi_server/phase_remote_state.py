@@ -1,4 +1,20 @@
-"""État télécommande phases (thread-safe) — GET/POST /api/phase-remote."""
+"""
+État partagé de la télécommande — GET/POST /api/phase-remote.
+
+Ce module est la SOURCE DE VÉRITÉ du programme : il contient tout l'état visible
+par la scène (navigateur) et la télécommande (panneau web).
+
+Pour étendre (nouvelle phase, nouveau réglage) :
+  1. Ajouter la variable globale + sa valeur par défaut ici.
+  2. L'inclure dans _snapshot_unlocked() → le GET la renvoie automatiquement.
+  3. Gérer le POST dans post_remote_payload() avec le pattern has_X existant.
+  4. Côté JS : lire data.nouveauChamp dans phase-remote.js au poll.
+
+Phases reconnues : VALID_PHASES + PANEL_PHASE_ORDER + PANEL_PHASE_LABELS.
+Thèmes reconnus  : VALID_THEMES.
+
+Thread-safety : toutes les lectures/écritures des variables _privées passent par _lock.
+"""
 from __future__ import annotations
 
 import os
@@ -30,6 +46,9 @@ VALID_THEMES = frozenset({'ssi', 'diagonal'})
 
 # Pause du cycle visuel (phases) — fond + CRT continuent
 _phases_paused: bool = False
+
+# Son des vidéos phase_videos/ — muet par défaut, activable depuis la télécommande
+_video_muted: bool = True
 
 VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam'})
 
@@ -76,11 +95,11 @@ def panel_phase_definitions() -> list[dict[str, Any]]:
 
 # Liste phase_videos/ : cache TTL (poll navigateur très fréquent → évite list_dir à chaque GET)
 _pv_list_lock = threading.Lock()
-_pv_list_cache: tuple[float, list[str]] | None = None
+_pv_list_cache: tuple[str, float, list[str]] | None = None  # (theme, expiry, files)
 
 # Liste backgrounds/ : même idée
 _bg_list_lock = threading.Lock()
-_bg_list_cache: tuple[float, list[str]] | None = None
+_bg_list_cache: tuple[str, float, list[str]] | None = None  # (theme, expiry, files)
 
 
 def _phase_video_list_ttl_sec() -> float:
@@ -147,6 +166,7 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'idleResumeMs': _idle_resume_ms,
         'theme': _theme,
         'phasesPaused': _phases_paused,
+        'videoMuted': _video_muted,
     }
 
 
@@ -166,7 +186,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     « phase » est optionnel si seuls des réglages fond sont envoyés.
     """
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
-    global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused
+    global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -179,16 +199,18 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_idle_resume = 'idleResumeMs' in data
     has_theme = 'theme' in data
     has_pause = 'pausePhases' in data
+    has_video_muted = 'videoMuted' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
-            and not has_idle_resume and not has_theme and not has_pause:
+            and not has_idle_resume and not has_theme and not has_pause and not has_video_muted:
         raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, '
-            'backgroundVideoIndex, idleResumeMs, theme'
+            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, videoMuted'
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
-        and not has_bg_auto and not has_bg_index and not has_theme and not has_pause
+        and not has_bg_auto and not has_bg_index and not has_theme \
+        and not has_pause and not has_video_muted
 
     with _lock:
         if has_phase:
@@ -253,6 +275,9 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
 
         if has_pause:
             _phases_paused = bool(data.get('pausePhases'))
+
+        if has_video_muted:
+            _video_muted = bool(data.get('videoMuted'))
 
         if not idle_only:
             _seq += 1

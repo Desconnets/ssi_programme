@@ -17,6 +17,7 @@ import {
   initPhaseVideos,
   setOsWindowMinLoopMs,
   setPhasePaused,
+  setOsWindowVideoMuted,
 } from './phases.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
 
@@ -50,6 +51,8 @@ export function startPhaseRemotePolling() {
   let lastAppliedTheme = null;
   /** État pause phases appliqué sur la page scène. */
   let lastAppliedPaused = null;
+  /** État mute vidéo appliqué sur la page scène. */
+  let lastAppliedVideoMuted = null;
   /** @type {AbortController | null} */
   let abortCtl = null;
   let timeoutId = 0;
@@ -80,6 +83,13 @@ export function startPhaseRemotePolling() {
             applyRemotePhaseCommand(ph, data.videoIndex);
           }
         }
+      }
+
+      /* Mute / son des vidéos phase */
+      const isVideoMuted = data.videoMuted !== false;
+      if (isVideoMuted !== lastAppliedVideoMuted) {
+        lastAppliedVideoMuted = isVideoMuted;
+        setOsWindowVideoMuted(isVideoMuted);
       }
 
       /* Pause / reprise du cycle visuel */

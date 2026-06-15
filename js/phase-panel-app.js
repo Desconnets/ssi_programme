@@ -189,6 +189,7 @@ async function bootstrap() {
   const btnBgApply = document.getElementById('btnPanelBgApply');
   const idleResumeSec = /** @type {HTMLInputElement} */ (document.getElementById('panelIdleResumeSec'));
   const btnIdleResumeApply = document.getElementById('btnPanelIdleResumeApply');
+  const videoMutedCheck = /** @type {HTMLInputElement} */ (document.getElementById('panelVideoMuted'));
   const btnThemeSsi = document.getElementById('btnThemeSsi');
   const btnThemeDiagonal = document.getElementById('btnThemeDiagonal');
   const btnPausePhases = document.getElementById('btnPausePhases');
@@ -211,7 +212,8 @@ async function bootstrap() {
     !btnIdleResumeApply ||
     !btnThemeSsi ||
     !btnThemeDiagonal ||
-    !btnPausePhases
+    !btnPausePhases ||
+    !videoMutedCheck
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -269,6 +271,9 @@ async function bootstrap() {
         const sec = Math.round(ir / 1000);
         idleResumeSec.value = String(Math.max(3, Math.min(900, sec)));
       }
+
+      /* Sync case muet vidéo */
+      videoMutedCheck.checked = j.videoMuted !== false;
 
       /* Sync boutons thème */
       const activeTheme = typeof j.theme === 'string' ? j.theme : 'ssi';
@@ -360,6 +365,19 @@ async function bootstrap() {
       statusLine.textContent = m;
     }
   };
+
+  videoMutedCheck.addEventListener('change', async () => {
+    const muted = videoMutedCheck.checked;
+    log.append('cmd', muted ? '🔇 Vidéo muette' : '🔊 Son vidéo activé');
+    try {
+      const res = await postRemote({ videoMuted: muted });
+      logRemoteResult('POST mute vidéo', res);
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST', m);
+      statusLine.textContent = m;
+    }
+  });
 
   btnThemeSsi.addEventListener('click', () => sendTheme('ssi'));
   btnThemeDiagonal.addEventListener('click', () => sendTheme('diagonal'));
