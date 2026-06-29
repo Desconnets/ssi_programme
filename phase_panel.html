@@ -1,384 +1,508 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="fr">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>SSI — Télécommande phases</title>
-  <style>
-    :root {
-      color-scheme: dark light;
-      --panel-gap: 1rem;
-      --panel-radius: 8px;
-      --panel-border: 1px solid color-mix(in srgb, currentColor 18%, transparent);
-    }
-    * { box-sizing: border-box; }
-    body {
-      font-family: system-ui, sans-serif;
-      margin: 0;
-      padding: clamp(0.75rem, 2vw, 1.25rem);
-      line-height: 1.45;
-      max-width: min(56rem, 100%);
-      margin-inline: auto;
-    }
-    h1 { font-size: clamp(1.05rem, 2.5vw, 1.25rem); margin: 0 0 0.35rem; }
-    .sub {
-      font-size: clamp(0.78rem, 2vw, 0.85rem);
-      opacity: 0.85;
-      margin: 0 0 1rem;
-    }
-    a { color: #06c; }
-    @media (prefers-color-scheme: dark) { a { color: #6ae; } }
-
-    /* Grille : gauche = commandes, droite = journal ; une colonne sur étroit */
-    .panel-layout {
-      display: grid;
-      gap: var(--panel-gap);
-      align-items: stretch;
-    }
-    @media (min-width: 40rem) {
-      .panel-layout {
-        grid-template-columns: minmax(12rem, 1fr) minmax(16rem, 1.15fr);
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SSI — Télécommande phases</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        --panel-gap: 1rem;
+        --panel-radius: 8px;
+        --panel-border: 1px solid
+          color-mix(in srgb, currentColor 18%, transparent);
       }
-    }
-
-    .panel-col {
-      min-width: 0;
-    }
-    .panel-col--left {
-      display: flex;
-      flex-direction: column;
-      gap: 0.25rem;
-    }
-    .panel-col--right {
-      display: flex;
-      flex-direction: column;
-      min-height: min(14rem, 40vh);
-    }
-    @media (min-width: 40rem) {
-      .panel-col--right {
-        min-height: min(22rem, 65vh);
-        position: sticky;
-        top: 0.75rem;
-        align-self: start;
-        max-height: calc(100vh - 1.5rem);
+      * {
+        box-sizing: border-box;
       }
-    }
-
-    .panel-section {
-      margin: 0;
-      padding: 0.65rem 0 0;
-      border-top: var(--panel-border);
-    }
-    .panel-col--left > .panel-section:first-of-type {
-      padding-top: 0;
-      border-top: none;
-    }
-    .panel-section h2 {
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin: 0 0 0.45rem;
-      opacity: 0.72;
-    }
-
-    .panel-toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      align-items: center;
-      margin-bottom: 0.5rem;
-    }
-    .panel-toolbar button,
-    .panel-action-btn {
-      padding: 0.5rem 0.65rem;
-      font-size: clamp(0.85rem, 2vw, 0.95rem);
-      cursor: pointer;
-      border-radius: var(--panel-radius);
-      border: 1px solid #888;
-      background: #f0f0f0;
-    }
-    @media (prefers-color-scheme: dark) {
-      .panel-toolbar button,
-      .panel-action-btn { background: #2a2a2a; color: #eee; border-color: #555; }
-    }
-    .panel-toolbar button.secondary {
-      font-size: 0.78rem;
-      padding: 0.35rem 0.5rem;
-    }
-
-    #panelActions {
-      display: flex;
-      flex-direction: column;
-      gap: 0.35rem;
-    }
-
-    #panelVideoSelect,
-    #panelBgSelect {
-      flex: 1;
-      min-width: min(100%, 12rem);
-      padding: 0.45rem 0.5rem;
-      font-size: 0.88rem;
-      border-radius: 6px;
-      max-width: 100%;
-    }
-
-    .panel-field {
-      margin-bottom: 0.65rem;
-    }
-    .panel-field label:first-child {
-      display: block;
-      font-size: 0.78rem;
-      margin-bottom: 0.25rem;
-      opacity: 0.88;
-    }
-    .panel-field-hint {
-      font-size: 0.72rem;
-      opacity: 0.78;
-      margin: 0 0 0.5rem;
-    }
-    .panel-row {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      margin-bottom: 0.35rem;
-    }
-    .panel-row input[type="range"] {
-      flex: 1;
-      min-width: 0;
-    }
-    .panel-mono {
-      font-family: ui-monospace, monospace;
-      font-size: 0.78rem;
-      min-width: 2.5rem;
-      text-align: right;
-    }
-    .panel-check {
-      display: flex;
-      align-items: center;
-      gap: 0.4rem;
-      font-size: 0.82rem;
-      margin: 0.4rem 0 0.35rem;
-      cursor: pointer;
-    }
-    .panel-toolbar--tight {
-      margin-bottom: 0;
-      margin-top: 0.25rem;
-    }
-
-    #panelStatusLine {
-      font-size: 0.78rem;
-      color: #444;
-      margin: 0.35rem 0 0;
-      word-break: break-word;
-    }
-    @media (prefers-color-scheme: dark) { #panelStatusLine { color: #bbb; } }
-
-    /* Terminal / journal — colonne droite */
-    .panel-terminal {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      min-height: 0;
-      padding-top: 0.5rem;
-      border-top: var(--panel-border);
-    }
-    @media (min-width: 40rem) {
-      .panel-terminal {
-        border-top: none;
-        padding-top: 0;
+      body {
+        font-family: system-ui, sans-serif;
+        margin: 0;
+        padding: clamp(0.75rem, 2vw, 1.25rem);
+        line-height: 1.45;
+        max-width: min(56rem, 100%);
+        margin-inline: auto;
       }
-      .panel-col--right .panel-terminal {
-        border: var(--panel-border);
-        border-radius: var(--panel-radius);
-        padding: 0.65rem 0.75rem;
-        background: color-mix(in srgb, Canvas 96%, CanvasText 4%);
+      h1 {
+        font-size: clamp(1.05rem, 2.5vw, 1.25rem);
+        margin: 0 0 0.35rem;
+      }
+      .sub {
+        font-size: clamp(0.78rem, 2vw, 0.85rem);
+        opacity: 0.85;
+        margin: 0 0 1rem;
+      }
+      a {
+        color: #06c;
       }
       @media (prefers-color-scheme: dark) {
-        .panel-col--right .panel-terminal {
-          background: color-mix(in srgb, Canvas 94%, CanvasText 6%);
+        a {
+          color: #6ae;
         }
       }
-    }
 
-    #panelLog {
-      flex: 1;
-      min-height: 10rem;
-      overflow: auto;
-      margin: 0.35rem 0 0;
-      padding: 0.5rem 0.65rem;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-      font-size: clamp(0.65rem, 1.6vw, 0.72rem);
-      line-height: 1.35;
-      white-space: pre-wrap;
-      word-break: break-word;
-      background: #f6f6f6;
-      border: 1px solid #ccc;
-      border-radius: 6px;
-    }
-    @media (min-width: 40rem) {
-      #panelLog {
-        min-height: 12rem;
-        max-height: calc(100vh - 11rem);
+      /* Grille : gauche = commandes, droite = journal ; une colonne sur étroit */
+      .panel-layout {
+        display: grid;
+        gap: var(--panel-gap);
+        align-items: stretch;
       }
-    }
-    @media (prefers-color-scheme: dark) {
-      #panelLog { background: #141414; border-color: #3a3a3a; color: #ddd; }
-    }
+      @media (min-width: 40rem) {
+        .panel-layout {
+          grid-template-columns: minmax(12rem, 1fr) minmax(16rem, 1.15fr);
+        }
+      }
 
-    .hint {
-      font-size: clamp(0.72rem, 1.8vw, 0.78rem);
-      opacity: 0.82;
-      margin: 1rem 0 0;
-      grid-column: 1 / -1;
-    }
+      .panel-col {
+        min-width: 0;
+      }
+      .panel-col--left {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+      }
+      .panel-col--right {
+        display: flex;
+        flex-direction: column;
+        min-height: min(14rem, 40vh);
+      }
+      @media (min-width: 40rem) {
+        .panel-col--right {
+          min-height: min(22rem, 65vh);
+          position: sticky;
+          top: 0.75rem;
+          align-self: start;
+          max-height: calc(100vh - 1.5rem);
+        }
+      }
 
-    .sr-only {
-      position: absolute;
-      width: 1px;
-      height: 1px;
-      padding: 0;
-      margin: -1px;
-      overflow: hidden;
-      clip: rect(0, 0, 0, 0);
-      border: 0;
-    }
+      .panel-section {
+        margin: 0;
+        padding: 0.65rem 0 0;
+        border-top: var(--panel-border);
+      }
+      .panel-col--left > .panel-section:first-of-type {
+        padding-top: 0;
+        border-top: none;
+      }
+      .panel-section h2 {
+        font-size: 0.7rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin: 0 0 0.45rem;
+        opacity: 0.72;
+      }
 
-    /* Boutons de thème */
-    .theme-btn-group {
-      display: flex;
-      gap: 0.5rem;
-      flex-wrap: wrap;
-    }
-    .theme-btn {
-      flex: 1;
-      min-width: 7rem;
-      padding: 0.55rem 0.75rem;
-      font-size: 0.88rem;
-      font-weight: 600;
-      cursor: pointer;
-      border-radius: var(--panel-radius);
-      border: 2px solid transparent;
-      transition: box-shadow 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
-      opacity: 0.72;
-    }
-    .theme-btn:hover { opacity: 0.9; }
-    .theme-btn--ssi {
-      background: #6b00dd;
-      color: #fff;
-      border-color: #02d1ae;
-    }
-    .theme-btn--diagonal {
-      background: #f040b0;
-      color: #fff;
-      border-color: #000;
-    }
-    .theme-btn.active {
-      opacity: 1;
-      box-shadow: 0 0 0 3px currentColor;
-    }
-  </style>
-</head>
-<body>
-  <h1>Télécommande phases</h1>
-  <p class="sub"><a href="/">← Retour à la scène</a> · métadonnées &amp; boutons fournis par <code>GET /api/phase-remote</code> (<code>panelPhases</code>)</p>
+      .panel-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+      .panel-toolbar button,
+      .panel-action-btn {
+        padding: 0.5rem 0.65rem;
+        font-size: clamp(0.85rem, 2vw, 0.95rem);
+        cursor: pointer;
+        border-radius: var(--panel-radius);
+        border: 1px solid #888;
+        background: #f0f0f0;
+      }
+      @media (prefers-color-scheme: dark) {
+        .panel-toolbar button,
+        .panel-action-btn {
+          background: #2a2a2a;
+          color: #eee;
+          border-color: #555;
+        }
+      }
+      .panel-toolbar button.secondary {
+        font-size: 0.78rem;
+        padding: 0.35rem 0.5rem;
+      }
 
-  <div class="panel-layout">
-    <div class="panel-col panel-col--left">
-      <section class="panel-section" aria-labelledby="lbl-theme">
-        <h2 id="lbl-theme">Thème / Identité</h2>
-        <p class="panel-field-hint">Change les couleurs de la scène et charge la bibliothèque de médias du thème (stickers, vidéos, fonds).</p>
-        <div class="theme-btn-group">
-          <button type="button" class="theme-btn theme-btn--ssi" id="btnThemeSsi" data-theme="ssi">SSI</button>
-          <button type="button" class="theme-btn theme-btn--diagonal" id="btnThemeDiagonal" data-theme="diagonal">Diagonal Cinéma</button>
-        </div>
-      </section>
+      #panelActions {
+        display: flex;
+        flex-direction: column;
+        gap: 0.35rem;
+      }
 
-      <section class="panel-section" aria-labelledby="lbl-actions">
-        <h2 id="lbl-actions">Actions</h2>
-        <div id="panelActions"></div>
-        <div class="panel-field" style="margin-top:0.5rem">
-          <label for="panelTextInput">Message (phase Texte)</label>
-          <input type="text" id="panelTextInput" placeholder="Entrez un message…"
-            style="width:100%;padding:0.4rem 0.5rem;font-size:0.9rem;border-radius:6px;border:1px solid #888;" />
-        </div>
-        <div class="panel-toolbar panel-toolbar--tight" style="margin-top:0.55rem">
-          <button type="button" id="btnPausePhases" class="panel-action-btn" style="width:100%;font-size:0.9rem">
-            ⏸ Pause phases (fond uniquement)
-          </button>
-        </div>
-      </section>
+      #panelVideoSelect,
+      #panelBgSelect {
+        flex: 1;
+        min-width: min(100%, 12rem);
+        padding: 0.45rem 0.5rem;
+        font-size: 0.88rem;
+        border-radius: 6px;
+        max-width: 100%;
+      }
 
-      <section class="panel-section" aria-labelledby="lbl-idle">
-        <h2 id="lbl-idle">Reprise auto (boucle snake)</h2>
-        <p class="panel-field-hint">Sans nouvelle commande phase ou fond : après ce délai, la scène reprend le cycle standard.</p>
-        <div class="panel-field">
-          <label for="panelIdleResumeSec">Délai (secondes)</label>
-          <div class="panel-row">
-            <input type="number" id="panelIdleResumeSec" min="3" max="900" step="1" value="60" aria-label="Secondes avant reprise auto" />
-            <button type="button" class="secondary" id="btnPanelIdleResumeApply">Appliquer</button>
-          </div>
-        </div>
-      </section>
+      .panel-field {
+        margin-bottom: 0.65rem;
+      }
+      .panel-field label:first-child {
+        display: block;
+        font-size: 0.78rem;
+        margin-bottom: 0.25rem;
+        opacity: 0.88;
+      }
+      .panel-field-hint {
+        font-size: 0.72rem;
+        opacity: 0.78;
+        margin: 0 0 0.5rem;
+      }
+      .panel-row {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-bottom: 0.35rem;
+      }
+      .panel-row input[type="range"] {
+        flex: 1;
+        min-width: 0;
+      }
+      .panel-mono {
+        font-family: ui-monospace, monospace;
+        font-size: 0.78rem;
+        min-width: 2.5rem;
+        text-align: right;
+      }
+      .panel-check {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-size: 0.82rem;
+        margin: 0.4rem 0 0.35rem;
+        cursor: pointer;
+      }
+      .panel-toolbar--tight {
+        margin-bottom: 0;
+        margin-top: 0.25rem;
+      }
 
-      <section class="panel-section" aria-labelledby="lbl-video">
-        <h2 id="lbl-video">Vidéo (phase fenêtre OS)</h2>
-        <div class="panel-toolbar">
-          <label for="panelVideoSelect" class="sr-only">Choisir la vidéo</label>
-          <select id="panelVideoSelect" aria-label="Vidéo phase_videos"></select>
-          <button type="button" class="secondary" id="btnPanelRefresh">Rafraîchir liste</button>
-        </div>
-      </section>
+      #panelStatusLine {
+        font-size: 0.78rem;
+        color: #444;
+        margin: 0.35rem 0 0;
+        word-break: break-word;
+      }
+      @media (prefers-color-scheme: dark) {
+        #panelStatusLine {
+          color: #bbb;
+        }
+      }
 
-      <section class="panel-section" aria-labelledby="lbl-bg">
-        <h2 id="lbl-bg">Fond scène</h2>
-        <p class="panel-field-hint">Dégradé au-dessus de la vidéo · fonds depuis <code>backgrounds/</code></p>
-        <div class="panel-field">
-          <label for="panelBgOpacity">Opacité du dégradé</label>
-          <div class="panel-row">
-            <input type="range" id="panelBgOpacity" min="0" max="100" value="65" aria-valuemin="0" aria-valuemax="100" />
-            <span id="panelBgOpacityVal" class="panel-mono">65%</span>
-          </div>
-          <div class="panel-toolbar panel-toolbar--tight">
-            <button type="button" class="secondary" id="btnPanelBgOpacityApply">Appliquer opacité</button>
-            <button type="button" class="secondary" id="btnPanelBgOpacityReset">Opacité CSS par défaut</button>
-          </div>
-        </div>
-        <div class="panel-field">
-          <label for="panelBgSelect">Vidéo de fond</label>
-          <select id="panelBgSelect" aria-label="Vidéos backgrounds"></select>
-          <label class="panel-check">
-            <input type="checkbox" id="panelBgAutoRotate" checked />
-            Rotation automatique (~3&nbsp;min si plusieurs fichiers)
-          </label>
-          <div class="panel-toolbar panel-toolbar--tight">
-            <button type="button" id="btnPanelBgApply">Appliquer le fond</button>
-          </div>
-        </div>
-      </section>
+      /* Terminal / journal — colonne droite */
+      .panel-terminal {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+        padding-top: 0.5rem;
+        border-top: var(--panel-border);
+      }
+      @media (min-width: 40rem) {
+        .panel-terminal {
+          border-top: none;
+          padding-top: 0;
+        }
+        .panel-col--right .panel-terminal {
+          border: var(--panel-border);
+          border-radius: var(--panel-radius);
+          padding: 0.65rem 0.75rem;
+          background: color-mix(in srgb, Canvas 96%, CanvasText 4%);
+        }
+        @media (prefers-color-scheme: dark) {
+          .panel-col--right .panel-terminal {
+            background: color-mix(in srgb, Canvas 94%, CanvasText 6%);
+          }
+        }
+      }
 
-      <p id="panelStatusLine" aria-live="polite"></p>
-    </div>
+      #panelLog {
+        flex: 1;
+        min-height: 10rem;
+        overflow: auto;
+        margin: 0.35rem 0 0;
+        padding: 0.5rem 0.65rem;
+        font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        font-size: clamp(0.65rem, 1.6vw, 0.72rem);
+        line-height: 1.35;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: #f6f6f6;
+        border: 1px solid #ccc;
+        border-radius: 6px;
+      }
+      @media (min-width: 40rem) {
+        #panelLog {
+          min-height: 12rem;
+          max-height: calc(100vh - 11rem);
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        #panelLog {
+          background: #141414;
+          border-color: #3a3a3a;
+          color: #ddd;
+        }
+      }
 
-    <div class="panel-col panel-col--right">
-      <section class="panel-section panel-terminal" aria-labelledby="lbl-log">
-        <h2 id="lbl-log">Journal</h2>
-        <div class="panel-toolbar">
-          <button type="button" class="secondary" id="btnPanelLogClear">Vider le journal</button>
-        </div>
-        <pre id="panelLog" role="log" aria-live="polite"></pre>
-      </section>
-    </div>
+      .hint {
+        font-size: clamp(0.72rem, 1.8vw, 0.78rem);
+        opacity: 0.82;
+        margin: 1rem 0 0;
+        grid-column: 1 / -1;
+      }
 
-    <p class="hint">
-      Délai avant reprise auto : réglable ci‑dessus (<code>idleResumeMs</code> via API) ; repli navigateur
-      <code>PHASE_REMOTE_IDLE_RESUME_MS</code> dans <code>js/config.js</code> si champ absent.
-      Fond scène : opacité du dégradé, choix de la vidéo <code>backgrounds/</code> (crossfade), rotation auto ~3&nbsp;min.
-      Pour étendre phases / POST : <code>docs/remote-panel.md</code>.
-      <br>
-      <strong>Étroit</strong> : colonnes empilées (actions puis journal). <strong>≥ 640px</strong> : commandes à gauche, journal à droite.
+      .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        border: 0;
+      }
+
+      /* Boutons de thème */
+      .theme-btn-group {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+      }
+      .theme-btn {
+        flex: 1;
+        min-width: 7rem;
+        padding: 0.55rem 0.75rem;
+        font-size: 0.88rem;
+        font-weight: 600;
+        cursor: pointer;
+        border-radius: var(--panel-radius);
+        border: 2px solid transparent;
+        transition:
+          box-shadow 0.15s ease,
+          border-color 0.15s ease,
+          opacity 0.15s ease;
+        opacity: 0.72;
+      }
+      .theme-btn:hover {
+        opacity: 0.9;
+      }
+      .theme-btn--ssi {
+        background: #6b00dd;
+        color: #fff;
+        border-color: #02d1ae;
+      }
+      .theme-btn--diagonal {
+        background: #f040b0;
+        color: #fff;
+        border-color: #000;
+      }
+      .theme-btn.active {
+        opacity: 1;
+        box-shadow: 0 0 0 3px currentColor;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Télécommande phases</h1>
+    <p class="sub">
+      <a href="/">← Retour à la scène</a> · métadonnées &amp; boutons fournis
+      par <code>GET /api/phase-remote</code> (<code>panelPhases</code>)
     </p>
-  </div>
 
-  <script type="module" src="js/phase-panel-app.js"></script>
-</body>
+    <div class="panel-layout">
+      <div class="panel-col panel-col--left">
+        <section class="panel-section" aria-labelledby="lbl-theme">
+          <h2 id="lbl-theme">Thème / Identité</h2>
+          <p class="panel-field-hint">
+            Change les couleurs de la scène et charge la bibliothèque de médias
+            du thème (stickers, vidéos, fonds).
+          </p>
+          <div class="theme-btn-group">
+            <button
+              type="button"
+              class="theme-btn theme-btn--ssi"
+              id="btnThemeSsi"
+              data-theme="ssi"
+            >
+              SSI
+            </button>
+            <button
+              type="button"
+              class="theme-btn theme-btn--diagonal"
+              id="btnThemeDiagonal"
+              data-theme="diagonal"
+            >
+              Diagonal Cinéma
+            </button>
+          </div>
+        </section>
+
+        <section class="panel-section" aria-labelledby="lbl-actions">
+          <h2 id="lbl-actions">Actions</h2>
+          <div id="panelActions"></div>
+          <div class="panel-field" style="margin-top: 0.5rem">
+            <label for="panelTextInput">Message (phase Texte)</label>
+            <input
+              type="text"
+              id="panelTextInput"
+              placeholder="Entrez un message…"
+              style="
+                width: 100%;
+                padding: 0.4rem 0.5rem;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                border: 1px solid #888;
+              "
+            />
+            <textarea id="text-editor"></textarea>
+          </div>
+          <div
+            class="panel-toolbar panel-toolbar--tight"
+            style="margin-top: 0.55rem"
+          >
+            <button
+              type="button"
+              id="btnPausePhases"
+              class="panel-action-btn"
+              style="width: 100%; font-size: 0.9rem"
+            >
+              ⏸ Pause phases (fond uniquement)
+            </button>
+          </div>
+        </section>
+
+        <section class="panel-section" aria-labelledby="lbl-idle">
+          <h2 id="lbl-idle">Reprise auto (boucle snake)</h2>
+          <p class="panel-field-hint">
+            Sans nouvelle commande phase ou fond : après ce délai, la scène
+            reprend le cycle standard.
+          </p>
+          <div class="panel-field">
+            <label for="panelIdleResumeSec">Délai (secondes)</label>
+            <div class="panel-row">
+              <input
+                type="number"
+                id="panelIdleResumeSec"
+                min="3"
+                max="900"
+                step="1"
+                value="60"
+                aria-label="Secondes avant reprise auto"
+              />
+              <button
+                type="button"
+                class="secondary"
+                id="btnPanelIdleResumeApply"
+              >
+                Appliquer
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel-section" aria-labelledby="lbl-video">
+          <h2 id="lbl-video">Vidéo (phase fenêtre OS)</h2>
+          <div class="panel-toolbar">
+            <label for="panelVideoSelect" class="sr-only"
+              >Choisir la vidéo</label
+            >
+            <select
+              id="panelVideoSelect"
+              aria-label="Vidéo phase_videos"
+            ></select>
+            <button type="button" class="secondary" id="btnPanelRefresh">
+              Rafraîchir liste
+            </button>
+          </div>
+        </section>
+
+        <section class="panel-section" aria-labelledby="lbl-bg">
+          <h2 id="lbl-bg">Fond scène</h2>
+          <p class="panel-field-hint">
+            Dégradé au-dessus de la vidéo · fonds depuis
+            <code>backgrounds/</code>
+          </p>
+          <div class="panel-field">
+            <label for="panelBgOpacity">Opacité du dégradé</label>
+            <div class="panel-row">
+              <input
+                type="range"
+                id="panelBgOpacity"
+                min="0"
+                max="100"
+                value="65"
+                aria-valuemin="0"
+                aria-valuemax="100"
+              />
+              <span id="panelBgOpacityVal" class="panel-mono">65%</span>
+            </div>
+            <div class="panel-toolbar panel-toolbar--tight">
+              <button
+                type="button"
+                class="secondary"
+                id="btnPanelBgOpacityApply"
+              >
+                Appliquer opacité
+              </button>
+              <button
+                type="button"
+                class="secondary"
+                id="btnPanelBgOpacityReset"
+              >
+                Opacité CSS par défaut
+              </button>
+            </div>
+          </div>
+          <div class="panel-field">
+            <label for="panelBgSelect">Vidéo de fond</label>
+            <select id="panelBgSelect" aria-label="Vidéos backgrounds"></select>
+            <label class="panel-check">
+              <input type="checkbox" id="panelBgAutoRotate" checked />
+              Rotation automatique (~3&nbsp;min si plusieurs fichiers)
+            </label>
+            <div class="panel-toolbar panel-toolbar--tight">
+              <button type="button" id="btnPanelBgApply">
+                Appliquer le fond
+              </button>
+            </div>
+          </div>
+        </section>
+
+        <p id="panelStatusLine" aria-live="polite"></p>
+      </div>
+
+      <div class="panel-col panel-col--right">
+        <section class="panel-section panel-terminal" aria-labelledby="lbl-log">
+          <h2 id="lbl-log">Journal</h2>
+          <div class="panel-toolbar">
+            <button type="button" class="secondary" id="btnPanelLogClear">
+              Vider le journal
+            </button>
+          </div>
+          <pre id="panelLog" role="log" aria-live="polite"></pre>
+        </section>
+      </div>
+
+      <p class="hint">
+        Délai avant reprise auto : réglable ci‑dessus (<code>idleResumeMs</code>
+        via API) ; repli navigateur
+        <code>PHASE_REMOTE_IDLE_RESUME_MS</code> dans
+        <code>js/config.js</code> si champ absent. Fond scène : opacité du
+        dégradé, choix de la vidéo <code>backgrounds/</code> (crossfade),
+        rotation auto ~3&nbsp;min. Pour étendre phases / POST :
+        <code>docs/remote-panel.md</code>.
+        <br />
+        <strong>Étroit</strong> : colonnes empilées (actions puis journal).
+        <strong>≥ 640px</strong> : commandes à gauche, journal à droite.
+      </p>
+    </div>
+    <link rel="stylesheet" href="lib/wysi/wysi.min.css" />
+    <script src="lib/wysi/wysi.min.js"></script>
+    <script type="module" src="js/phase-panel-app.js"></script>
+  </body>
 </html>

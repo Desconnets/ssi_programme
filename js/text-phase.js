@@ -39,7 +39,7 @@ export function applyTextPulse(levels, t) {
 // Public: call from remote command or cycle
 export function startTextPhase(text, durationMs, callback) {
   const { layer, content } = getElements();
-  content.textContent = text ?? '';
+  content.innerHTML = text ?? '';
   layer.classList.add('ssi-text-phase-layer--open');
   const dur = durationMs ?? TEXT_PHASE_DURATION_MS;
   textPhaseTimer = setTimeout(() => {
