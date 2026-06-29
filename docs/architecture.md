@@ -124,16 +124,33 @@ Voir la section TÉLÉCOMMANDE dans `js/phases.js` et `docs/remote-panel.md`.
 
 ## Dossiers médias
 
+Tout le contenu organisé est sous `content/`. Les dossiers racine `stickers/`, `phase_videos/`, `backgrounds/` restent comme repli final si `content/` est vide.
+
 ```
-stickers/        → images/GIFs des phases snake/boom/logo
-  ssi/           → stickers thème SSI
-  diagonal/      → stickers thème Diagonal (dont logo-diago*.gif)
-phase_videos/    → vidéos de la fenêtre OS (converties au démarrage)
-  ssi/           → vidéos thème SSI
-  diagonal/      → vidéos thème Diagonal
-backgrounds/     → vidéos de fond en boucle
-  ssi/
-  diagonal/
+content/
+  logos/
+    classique/   ← SSI-logo1.gif … SSI-logo4.gif
+    dark/        ← SSI-logo1_techno.gif … (versions glitchées)
+  classique/     ← mood SSI (couleurs violet/turquoise/rose)
+    stickers/
+      boom/         4 fichiers
+      jeux-video/  14 fichiers  (Nintendo, Pokémon, Sims, Tony Hawk…)
+      pop-culture/ 22 fichiers  (Harry Potter, Disney, Britney, Matrix…)
+      doux/         2 fichiers  (Ghibli, coeurs)
+    videos/
+      boom/         4 vidéos   (Daft Punk ×2, Mr Oizo, Rollercoaster)
+      jeux-video/  11 vidéos   (Nintendo, Sims, Pokémon, Scrubs, Rugrats…)
+      pop-culture/ 13 vidéos   (Matrix, Fight Club, Tarantino, zapping…)
+    backgrounds/
+      boom/ doux/ urban/ jeux-video/ pop-culture/
+  dark/          ← mood glitché/électrique (fichiers _techno)
+    stickers/    (mêmes catégories, versions _techno)
+    videos/      (mêmes catégories, versions _techno)
+    backgrounds/ (mêmes catégories)
+
+stickers/        → repli final (vide — tout est dans content/)
+phase_videos/    → repli final (vide)
+backgrounds/     → repli final (vide)
 archive/         → code archivé (playlist-mode/)
 docs/            → documentation technique
 ```

@@ -1,5 +1,46 @@
 # Changelog
 
+## [Juin 2026 — v2] — Système de contenu par mood et catégories
+
+### Architecture `content/`
+Refonte complète de l'organisation des médias. Tout le contenu est sous `content/` :
+
+```
+content/
+  logos/classique/   ← SSI-logo1 à 4
+  logos/dark/        ← SSI-logo_techno ×2
+  classique/stickers/  boom/  jeux-video/  pop-culture/  doux/
+  classique/videos/    boom/  jeux-video/  pop-culture/
+  classique/backgrounds/  boom/  doux/  urban/  jeux-video/  pop-culture/
+  dark/stickers/    (mêmes catégories, fichiers _techno glitchés)
+  dark/videos/      (mêmes catégories, fichiers _techno)
+  dark/backgrounds/ (mêmes catégories)
+```
+
+### Moods (remplacent ssi/diagonal)
+- **classique** — charte SSI violet/turquoise/rose, effets normaux
+- **dark** — version _techno glitchée, ambiance électrique
+
+### 5 catégories de contenu
+`boom` · `jeux-video` · `pop-culture` · `urban` · `doux`
+
+### Nouvelles features
+- Boutons mood + content set dynamiques sur la télécommande (auto-détectés depuis les sous-dossiers)
+- Chargement 3 niveaux : `content/{mood}/{type}/{set}/` → pool mood → racine legacy
+- Logos séparés dans `content/logos/`, toujours inclus avec les stickers
+- Conversion automatique étendue à tout `content/*/videos/` et `content/*/backgrounds/`
+
+### Bugs corrigés
+- Rechargement stickers au changement de mood (flag calculé avant mise à jour d'état)
+- Boom et fenêtre vidéo simultanés (animateStickersOut callback)
+- Boutons mood envoyaient encore 'ssi'/'diagonal'
+
+### À faire
+- 🎨 Revoir le design CSS du mood dark (plus intense, plus électrique)
+- 🎬 Nouvelles animations dédiées dark (ultérieur)
+
+---
+
 ## [Juin 2026] — Audit + documentation + identité du programme
 
 | Sujet | Détail |

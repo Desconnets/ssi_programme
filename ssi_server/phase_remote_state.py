@@ -11,7 +11,8 @@ Pour étendre (nouvelle phase, nouveau réglage) :
   4. Côté JS : lire data.nouveauChamp dans phase-remote.js au poll.
 
 Phases reconnues : VALID_PHASES + PANEL_PHASE_ORDER + PANEL_PHASE_LABELS.
-Thèmes reconnus  : VALID_THEMES.
+Moods reconnus   : VALID_MOODS (classique / dark).
+Content sets     : n'importe quel sous-dossier détecté dans stickers/, phase_videos/, backgrounds/.
 
 Thread-safety : toutes les lectures/écritures des variables _privées passent par _lock.
 """
@@ -40,9 +41,12 @@ _IDLE_RESUME_MS_MIN = 3000
 _IDLE_RESUME_MS_MAX = 900_000
 _idle_resume_ms: int = 60000
 
-# Thème identité visuelle (couleurs + bibliothèque médias)
-_theme: str = 'ssi'
-VALID_THEMES = frozenset({'ssi', 'diagonal'})
+# Mood identité visuelle (classique = SSI charte · dark = glitché/électrique)
+_theme: str = 'classique'
+VALID_MOODS = frozenset({'classique', 'dark'})
+
+# Content set actif — sous-dossier de contenu (boom, jeux-video, etc.) ; vide = repli sur mood
+_content_set: str = ''
 
 # Pause du cycle visuel (phases) — fond + CRT continuent
 _phases_paused: bool = False
@@ -112,44 +116,49 @@ def _phase_video_list_ttl_sec() -> float:
 
 def get_cached_phase_video_filenames() -> list[str]:
     """
-    Chemins relatifs dans phase_videos/ selon le thème actif (TTL court, thread-safe).
-    Si phase_videos/{theme}/ existe → retourne les chemins préfixés (ex. 'ssi/video.mp4').
+    Chemins relatifs dans phase_videos/ selon le mood + content set actifs (TTL court, thread-safe).
+    Priorité : phase_videos/{content_set}/ → phase_videos/{mood}/ → phase_videos/
     """
     from .config import VIDEO_EXT
-    from .fsutil import list_files_themed
+    from .fsutil import list_content_files
 
     global _pv_list_cache
-    current_theme = get_current_theme()
+    current_mood = get_current_theme()
+    current_cs = get_current_content_set()
+    cache_key = (current_cs, current_mood)
     now = time.monotonic()
     ttl = _phase_video_list_ttl_sec()
     with _pv_list_lock:
         if _pv_list_cache is not None:
-            cached_theme, exp, files = _pv_list_cache
-            if now < exp and cached_theme == current_theme:
+            cached_key, exp, files = _pv_list_cache
+            if now < exp and cached_key == cache_key:
                 return files
-        files = list_files_themed('phase_videos', VIDEO_EXT, current_theme)
-        _pv_list_cache = (current_theme, now + ttl, files)
+        files = list_content_files('videos', VIDEO_EXT, current_cs, current_mood, 'phase_videos')
+        _pv_list_cache = (cache_key, now + ttl, files)
         return files
 
 
 def get_cached_background_filenames() -> list[str]:
     """
-    Chemins relatifs dans backgrounds/ selon le thème actif (TTL court, thread-safe).
+    Chemins relatifs dans backgrounds/ selon le mood + content set actifs (TTL court, thread-safe).
+    Priorité : backgrounds/{content_set}/ → backgrounds/{mood}/ → backgrounds/
     """
     from .config import VIDEO_EXT
-    from .fsutil import list_files_themed
+    from .fsutil import list_content_files
 
     global _bg_list_cache
-    current_theme = get_current_theme()
+    current_mood = get_current_theme()
+    current_cs = get_current_content_set()
+    cache_key = (current_cs, current_mood)
     now = time.monotonic()
     ttl = _phase_video_list_ttl_sec()
     with _bg_list_lock:
         if _bg_list_cache is not None:
-            cached_theme, exp, files = _bg_list_cache
-            if now < exp and cached_theme == current_theme:
+            cached_key, exp, files = _bg_list_cache
+            if now < exp and cached_key == cache_key:
                 return files
-        files = list_files_themed('backgrounds', VIDEO_EXT, current_theme)
-        _bg_list_cache = (current_theme, now + ttl, files)
+        files = list_content_files('backgrounds', VIDEO_EXT, current_cs, current_mood, 'backgrounds')
+        _bg_list_cache = (cache_key, now + ttl, files)
         return files
 
 
@@ -165,6 +174,7 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'backgroundVideoIndex': _bg_forced_video_index,
         'idleResumeMs': _idle_resume_ms,
         'theme': _theme,
+        'contentSet': _content_set,
         'phasesPaused': _phases_paused,
         'videoMuted': _video_muted,
     }
@@ -173,6 +183,11 @@ def _snapshot_unlocked() -> dict[str, Any]:
 def get_current_theme() -> str:
     with _lock:
         return _theme
+
+
+def get_current_content_set() -> str:
+    with _lock:
+        return _content_set
 
 
 def get_snapshot() -> dict[str, Any]:
@@ -186,7 +201,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     « phase » est optionnel si seuls des réglages fond sont envoyés.
     """
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
-    global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted
+    global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -200,17 +215,19 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_theme = 'theme' in data
     has_pause = 'pausePhases' in data
     has_video_muted = 'videoMuted' in data
+    has_content_set = 'contentSet' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
-            and not has_idle_resume and not has_theme and not has_pause and not has_video_muted:
+            and not has_idle_resume and not has_theme and not has_pause \
+            and not has_video_muted and not has_content_set:
         raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, '
-            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, videoMuted'
+            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, videoMuted, contentSet'
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
         and not has_bg_auto and not has_bg_index and not has_theme \
-        and not has_pause and not has_video_muted
+        and not has_pause and not has_video_muted and not has_content_set
 
     with _lock:
         if has_phase:
@@ -265,8 +282,8 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
 
         if has_theme:
             t = str(data.get('theme', '')).strip().lower()
-            if t not in VALID_THEMES:
-                raise ValueError(f'thème invalide: {t!r} (valeurs: {sorted(VALID_THEMES)})')
+            if t not in VALID_MOODS:
+                raise ValueError(f'mood invalide: {t!r} (valeurs: {sorted(VALID_MOODS)})')
             if t != _theme:
                 _theme = t
                 # Invalider les caches de listes médias pour forcer un re-scan
@@ -278,6 +295,13 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
 
         if has_video_muted:
             _video_muted = bool(data.get('videoMuted'))
+
+        if has_content_set:
+            cs = str(data.get('contentSet') or '')
+            if cs != _content_set:
+                _content_set = cs
+                _pv_list_cache = None
+                _bg_list_cache = None
 
         if not idle_only:
             _seq += 1

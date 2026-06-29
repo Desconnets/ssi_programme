@@ -115,6 +115,22 @@
 
 ---
 
+## Dossiers médias — structure `content/`
+
+```
+content/
+  logos/classique/        ← logos SSI (toujours inclus dans les stickers classique)
+  logos/dark/             ← logos dark/techno
+  classique/stickers/     boom/  jeux-video/  pop-culture/  doux/  [urban/]
+  classique/videos/       boom/  jeux-video/  pop-culture/
+  classique/backgrounds/  boom/  doux/  urban/  jeux-video/  pop-culture/
+  dark/                   (mêmes sous-dossiers, fichiers _techno glitchés)
+```
+
+**Ajouter une catégorie** : créer le sous-dossier dans `content/classique/{type}/ma-categorie/` et `content/dark/{type}/ma-categorie/`. Bouton auto dans la télécommande.
+
+**Ajouter un mood** : créer `content/nouveau-mood/`, ajouter `[data-app-theme="nouveau-mood"]` dans `style.css`, ajouter dans `VALID_MOODS` (`phase_remote_state.py`), bouton dans `phase_panel.html`.
+
 ## Archive
 
 | Dossier | Contenu |

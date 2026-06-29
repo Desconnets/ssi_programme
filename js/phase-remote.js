@@ -47,8 +47,10 @@ export function startPhaseRemotePolling() {
   let lastAppliedPhaseCommandSeq = 0;
   /** Évite de rappeler la reprise idle en boucle pour le même horodatage de commande. */
   let idleFiredForLastCommandMs = null;
-  /** Thème identité actuellement appliqué sur la page scène. */
+  /** Mood visuel actuellement appliqué sur la page scène (classique / dark). */
   let lastAppliedTheme = null;
+  /** Content set actuellement appliqué (boom, jeux-video, etc.). */
+  let lastAppliedContentSet = null;
   /** État pause phases appliqué sur la page scène. */
   let lastAppliedPaused = null;
   /** État mute vidéo appliqué sur la page scène. */
@@ -99,13 +101,21 @@ export function startPhaseRemotePolling() {
         setPhasePaused(isPaused);
       }
 
-      /* Changement de thème identité (indépendant de seq — peut changer sans phase) */
-      const newTheme = typeof data.theme === 'string' ? data.theme : 'ssi';
-      if (newTheme !== lastAppliedTheme) {
+      /* Mood visuel (classique / dark) + content set — calculer les changements AVANT de mettre à jour */
+      const newTheme = typeof data.theme === 'string' ? data.theme : 'classique';
+      const newContentSet = typeof data.contentSet === 'string' ? data.contentSet : '';
+      const themeChanged = newTheme !== lastAppliedTheme;
+      const contentSetChanged = newContentSet !== lastAppliedContentSet;
+
+      if (themeChanged) {
         lastAppliedTheme = newTheme;
         document.documentElement.dataset.appTheme = newTheme;
-        setOsWindowMinLoopMs(newTheme === 'diagonal' ? OS_WINDOW_DIAGONAL_MIN_LOOP_MS : 0);
-        /* Rechargement des bibliothèques de médias du nouveau thème */
+        setOsWindowMinLoopMs(newTheme === 'dark' ? OS_WINDOW_DIAGONAL_MIN_LOOP_MS : 0);
+      }
+
+      /* Recharger les médias si mood OU content set a changé */
+      if (themeChanged || contentSetChanged) {
+        lastAppliedContentSet = newContentSet;
         try {
           const [stickerUrls, phaseVideoUrls, bgUrls] = await Promise.all([
             fetch('/api/stickers').then((r) => (r.ok ? r.json() : [])),

@@ -1,7 +1,53 @@
 """Résumé des fichiers exposés au démarrage (aperçu LIVE)."""
+import os
 from .config import AUDIO_EXT, IMAGE_EXT, VIDEO_EXT
-from .fsutil import list_files
 from .logutil import info, warn, sep
+
+
+def _count_content_files(media_type: str, exts: frozenset) -> int:
+    """Compte tous les fichiers d'un type dans content/ (tous moods + logos)."""
+    total = 0
+    content_dir = 'content'
+    if not os.path.isdir(content_dir):
+        return 0
+    for mood in os.listdir(content_dir):
+        mood_path = os.path.join(content_dir, mood)
+        if not os.path.isdir(mood_path):
+            continue
+        type_path = os.path.join(mood_path, media_type)
+        if not os.path.isdir(type_path):
+            continue
+        # Fichiers directs
+        try:
+            for f in os.listdir(type_path):
+                if os.path.splitext(f)[1].lower() in exts:
+                    total += 1
+        except OSError:
+            pass
+        # Fichiers dans les sous-dossiers content set
+        try:
+            for sub in os.listdir(type_path):
+                sub_path = os.path.join(type_path, sub)
+                if os.path.isdir(sub_path) and not sub.startswith('_'):
+                    for f in os.listdir(sub_path):
+                        if os.path.splitext(f)[1].lower() in exts:
+                            total += 1
+        except OSError:
+            pass
+    # Logos comptés séparément pour les stickers
+    if media_type == 'stickers':
+        logos_dir = os.path.join('content', 'logos')
+        if os.path.isdir(logos_dir):
+            for mood_logos in os.listdir(logos_dir):
+                logo_path = os.path.join(logos_dir, mood_logos)
+                if os.path.isdir(logo_path):
+                    try:
+                        for f in os.listdir(logo_path):
+                            if os.path.splitext(f)[1].lower() in exts:
+                                total += 1
+                    except OSError:
+                        pass
+    return total
 
 
 def print_startup_inventory() -> dict:
@@ -10,17 +56,17 @@ def print_startup_inventory() -> dict:
     Retourne un dict pour usage éventuel (tests).
     """
     counts = {
-        'stickers': len(list_files('stickers', IMAGE_EXT)),
-        'backgrounds': len(list_files('backgrounds', VIDEO_EXT)),
-        'phase_videos': len(list_files('phase_videos', VIDEO_EXT)),
+        'stickers':     _count_content_files('stickers', IMAGE_EXT),
+        'backgrounds':  _count_content_files('backgrounds', VIDEO_EXT),
+        'phase_videos': _count_content_files('videos', VIDEO_EXT),
     }
 
     sep()
-    info('PRÊT LIVE — inventaire fichiers')
+    info('PRÊT LIVE — inventaire fichiers (dossier content/)')
     sep()
-    info(f'  Stickers      → {counts["stickers"]:3d} fichier(s)   (dossier stickers/)')
-    info(f'  Fonds vidéo   → {counts["backgrounds"]:3d} fichier(s)   (dossier backgrounds/)')
-    info(f'  Phase fenêtre → {counts["phase_videos"]:3d} fichier(s)   (dossier phase_videos/)')
+    info(f'  Stickers      → {counts["stickers"]:3d} fichier(s)   (content/*/stickers/ + content/logos/)')
+    info(f'  Fonds vidéo   → {counts["backgrounds"]:3d} fichier(s)   (content/*/backgrounds/)')
+    info(f'  Phase fenêtre → {counts["phase_videos"]:3d} fichier(s)   (content/*/videos/)')
     sep()
 
     info('Mode audio : micro — le micro du navigateur pilote les effets visuels.')
@@ -34,12 +80,12 @@ def print_startup_inventory() -> dict:
         info('Aucune vidéo phase fenêtre : après SUPER BOOM passage direct à la phase logo.')
     else:
         info(
-            "phase_videos/ : au démarrage, les fichiers sont convertis en \u00ab \u2026 ok_converti.mp4 \u00bb "
-            "(H.264, audio conserv\u00e9) ; l'original part dans phase_videos/_archive/."
+            "phase_videos/ : au démarrage, les fichiers sont convertis en « … ok_converti.mp4 » "
+            "(H.264, audio conservé si présent) ; l'original part dans _archive/."
         )
     if counts['backgrounds'] > 0:
         info(
-            'backgrounds/ : même logique de conversion (MP4 ok_converti, originaux dans backgrounds/_archive/).'
+            'backgrounds/ : même logique de conversion (MP4 ok_converti, originaux dans _archive/).'
         )
 
     info('Les requêtes API sont loguées ci-dessous ; les gros fichiers (MP4) restent silencieux.')

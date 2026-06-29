@@ -24,7 +24,7 @@ import urllib.parse
 from http.server import SimpleHTTPRequestHandler
 
 from .config import ROOT_DIR, IMAGE_EXT, VIDEO_EXT
-from .fsutil import list_files, list_files_themed
+from .fsutil import list_files, list_content_files, get_available_content_sets
 from .logutil import api, diag, http_error, http_media, live, remote_cmd
 from .runtime_config import get_audio_input_mode
 from . import phase_remote_state
@@ -42,7 +42,8 @@ def _ssi_is_heavy_static_path(path_only: str) -> bool:
     """GET qui peuvent être longs (gros fichiers)."""
     p = path_only.split('?', 1)[0]
     return (
-        p.startswith('/backgrounds/')
+        p.startswith('/content/')
+        or p.startswith('/backgrounds/')
         or p.startswith('/phase_videos/')
     )
 
@@ -51,6 +52,7 @@ def _ssi_is_heavy_static_path(path_only: str) -> bool:
 _QUIET_OK_PATTERNS = tuple(
     re.compile(p)
     for p in (
+        r'^/content/',
         r'^/stickers/',
         r'^/backgrounds/',
         r'^/phase_videos/',
@@ -177,24 +179,27 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
 
     def _do_get(self, path: str) -> None:
         if path == '/api/stickers':
-            theme = phase_remote_state.get_current_theme()
-            files = list_files_themed('stickers', IMAGE_EXT, theme)
-            urls = [f'/stickers/{urllib.parse.quote(f)}' for f in files]
-            api(f'GET /api/stickers   → {len(files)} sticker(s) [{theme}]')
+            mood = phase_remote_state.get_current_theme()
+            cs = phase_remote_state.get_current_content_set()
+            paths = list_content_files('stickers', IMAGE_EXT, cs, mood, 'stickers')
+            urls = [f'/{urllib.parse.quote(p, safe="/")}' for p in paths]
+            api(f'GET /api/stickers   → {len(paths)} sticker(s) [cs={cs or "—"} mood={mood}]')
             self._send_json(urls)
             return
         if path == '/api/backgrounds':
-            theme = phase_remote_state.get_current_theme()
-            files = list_files_themed('backgrounds', VIDEO_EXT, theme)
-            urls = [f'/backgrounds/{urllib.parse.quote(f)}' for f in files]
-            api(f'GET /api/backgrounds → {len(files)} vidéo(s) [{theme}]')
+            mood = phase_remote_state.get_current_theme()
+            cs = phase_remote_state.get_current_content_set()
+            paths = list_content_files('backgrounds', VIDEO_EXT, cs, mood, 'backgrounds')
+            urls = [f'/{urllib.parse.quote(p, safe="/")}' for p in paths]
+            api(f'GET /api/backgrounds → {len(paths)} vidéo(s) [cs={cs or "—"} mood={mood}]')
             self._send_json(urls)
             return
         if path == '/api/phase-videos':
-            theme = phase_remote_state.get_current_theme()
-            files = list_files_themed('phase_videos', VIDEO_EXT, theme)
-            urls = [f'/phase_videos/{urllib.parse.quote(f)}' for f in files]
-            api(f'GET /api/phase-videos → {len(files)} vidéo(s) phase fenêtre [{theme}]')
+            mood = phase_remote_state.get_current_theme()
+            cs = phase_remote_state.get_current_content_set()
+            paths = list_content_files('videos', VIDEO_EXT, cs, mood, 'phase_videos')
+            urls = [f'/{urllib.parse.quote(p, safe="/")}' for p in paths]
+            api(f'GET /api/phase-videos → {len(paths)} vidéo(s) phase fenêtre [cs={cs or "—"} mood={mood}]')
             self._send_json(urls)
             return
         if path == '/api/health':
@@ -212,6 +217,7 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
             snap['backgroundVideoFiles'] = bg_files[:200]
             snap['validPhases'] = sorted(phase_remote_state.VALID_PHASES)
             snap['panelPhases'] = phase_remote_state.panel_phase_definitions()
+            snap['availableContentSets'] = get_available_content_sets('classique', 'dark')
             # Poll ~2×/s × plusieurs onglets : ne pas spammer [SSI·API] (voir SSI_PHASE_REMOTE_LOG=1)
             if os.environ.get('SSI_PHASE_REMOTE_LOG', '').lower() in ('1', 'true', 'yes', 'on'):
                 api(f'GET /api/phase-remote → seq={snap.get("seq")} phase={snap.get("phase")}')

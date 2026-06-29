@@ -276,6 +276,37 @@
       opacity: 1;
       box-shadow: 0 0 0 3px currentColor;
     }
+
+    /* Boutons content sets — générés dynamiquement */
+    .panel-content-sets {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .content-set-btn {
+      padding: 0.45rem 0.7rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-radius: var(--panel-radius);
+      border: 2px solid #888;
+      background: #e8e8e8;
+      opacity: 0.72;
+      transition: opacity 0.15s, box-shadow 0.15s, border-color 0.15s;
+    }
+    @media (prefers-color-scheme: dark) {
+      .content-set-btn { background: #2a2a2a; color: #eee; border-color: #555; }
+    }
+    .content-set-btn:hover { opacity: 0.9; }
+    .content-set-btn.active {
+      opacity: 1;
+      border-color: #f040b0;
+      box-shadow: 0 0 0 2px #f040b0;
+    }
+    .content-set-btn#btnContentSetNone.active {
+      border-color: #888;
+      box-shadow: 0 0 0 2px #888;
+    }
   </style>
 </head>
 <body>
@@ -285,11 +316,19 @@
   <div class="panel-layout">
     <div class="panel-col panel-col--left">
       <section class="panel-section" aria-labelledby="lbl-theme">
-        <h2 id="lbl-theme">Thème / Identité</h2>
-        <p class="panel-field-hint">Change les couleurs de la scène et charge la bibliothèque de médias du thème (stickers, vidéos, fonds).</p>
+        <h2 id="lbl-theme">Mood visuel</h2>
+        <p class="panel-field-hint">Change les couleurs et effets de la scène.</p>
         <div class="theme-btn-group">
-          <button type="button" class="theme-btn theme-btn--ssi" id="btnThemeSsi" data-theme="ssi">SSI</button>
-          <button type="button" class="theme-btn theme-btn--diagonal" id="btnThemeDiagonal" data-theme="diagonal">Diagonal Cinéma</button>
+          <button type="button" class="theme-btn theme-btn--ssi" id="btnThemeSsi" data-theme="classique">☀ Classique</button>
+          <button type="button" class="theme-btn theme-btn--diagonal" id="btnThemeDiagonal" data-theme="dark">⚡ Dark</button>
+        </div>
+      </section>
+
+      <section class="panel-section" aria-labelledby="lbl-content">
+        <h2 id="lbl-content">Contenu</h2>
+        <p class="panel-field-hint">Sélectionne la bibliothèque de médias (stickers, vidéos, fonds).</p>
+        <div id="panelContentSets" class="panel-content-sets">
+          <button type="button" class="content-set-btn" id="btnContentSetNone">— Racine (défaut)</button>
         </div>
       </section>
 

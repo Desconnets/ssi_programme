@@ -749,13 +749,13 @@ html.ssi-app-init-pending #startHint {
 }
 
 /* ═══════════════════════════════════════════════════════════════
-   THÈME DIAGONAL CINÉMA
-   Activation : <html data-app-theme="diagonal"> (via phase-remote.js)
+   MOOD DARK
+   Activation : <html data-app-theme="dark"> (via phase-remote.js)
    Palette : rose magenta #f040b0 · noir #000000 · blanc #ffffff
    ═══════════════════════════════════════════════════════════════ */
 
 /* Gradients de fond — variantes dark / light / mid Diagonal */
-[data-app-theme="diagonal"] .bg-gradient[data-theme="dark"] {
+[data-app-theme="dark"] .bg-gradient[data-theme="dark"] {
   background: linear-gradient(
     125deg,
     #050003 0%,
@@ -767,7 +767,7 @@ html.ssi-app-init-pending #startHint {
   );
 }
 
-[data-app-theme="diagonal"] .bg-gradient[data-theme="light"] {
+[data-app-theme="dark"] .bg-gradient[data-theme="light"] {
   background: linear-gradient(
     125deg,
     #ffffff 0%,
@@ -779,7 +779,7 @@ html.ssi-app-init-pending #startHint {
   );
 }
 
-[data-app-theme="diagonal"] .bg-gradient[data-theme="mid"] {
+[data-app-theme="dark"] .bg-gradient[data-theme="mid"] {
   background: linear-gradient(
     125deg,
     #000000 0%,
@@ -793,7 +793,7 @@ html.ssi-app-init-pending #startHint {
 
 /* ── Fausse fenêtre OS — style Samuel / croquis ─────────────────── */
 /* Contour noir, fond quasi-blanc, barre rose pâle, ombre graphique */
-[data-app-theme="diagonal"] .ssi-os-window {
+[data-app-theme="dark"] .ssi-os-window {
   border: 2px solid #000;
   background: rgba(255, 252, 254, 0.97);
   box-shadow:
@@ -801,28 +801,28 @@ html.ssi-app-init-pending #startHint {
     0 0 0 1px #000;
 }
 
-[data-app-theme="diagonal"] .ssi-os-titlebar {
+[data-app-theme="dark"] .ssi-os-titlebar {
   background: #ffc8e8;
   border-bottom: 1.5px solid #000;
 }
 
 /* Dots traffic light — tous rose pâle avec contour noir */
-[data-app-theme="diagonal"] .ssi-os-dot--r,
-[data-app-theme="diagonal"] .ssi-os-dot--y,
-[data-app-theme="diagonal"] .ssi-os-dot--g {
+[data-app-theme="dark"] .ssi-os-dot--r,
+[data-app-theme="dark"] .ssi-os-dot--y,
+[data-app-theme="dark"] .ssi-os-dot--g {
   background: #ffb0d8;
   border: 1.5px solid #000;
   box-shadow: none;
 }
 
 /* Texte de la barre — masqué, remplacé par pseudo-élément */
-[data-app-theme="diagonal"] .ssi-os-title {
+[data-app-theme="dark"] .ssi-os-title {
   color: transparent;
   text-shadow: none;
   position: relative;
 }
 
-[data-app-theme="diagonal"] #ssiOsWindowLayer .ssi-os-title::after {
+[data-app-theme="dark"] #ssiOsWindowLayer .ssi-os-title::after {
   content: '★  La BOUM de Samuel !  ★';
   position: absolute;
   inset: 0;
@@ -837,7 +837,7 @@ html.ssi-app-init-pending #startHint {
   text-shadow: none;
 }
 
-[data-app-theme="diagonal"] #ssiWebcamPhaseLayer .ssi-os-title::after {
+[data-app-theme="dark"] #ssiWebcamPhaseLayer .ssi-os-title::after {
   content: '★  La BOUM de Samuel !  ★';
   position: absolute;
   inset: 0;
@@ -855,7 +855,7 @@ html.ssi-app-init-pending #startHint {
 /* ── Layer TV au-dessus de la vidéo (Diagonal) ───────────────────
    Overlay scanlines + vignette inséré DANS le shell vidéo
    (z-index local : au-dessus de la vidéo et du no-signal overlay) */
-[data-app-theme="diagonal"] #ssiOsWindowLayer .ssi-os-video-shell::after {
+[data-app-theme="dark"] #ssiOsWindowLayer .ssi-os-video-shell::after {
   content: '';
   position: absolute;
   inset: 0;
@@ -887,7 +887,7 @@ html.ssi-app-init-pending #startHint {
 }
 
 /* "NO SIGNAL" — teinte rose Diagonal */
-[data-app-theme="diagonal"] #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait
+[data-app-theme="dark"] #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait
   .ssi-os-no-signal-overlay::before {
   background: linear-gradient(
     180deg,
@@ -899,7 +899,7 @@ html.ssi-app-init-pending #startHint {
   );
 }
 
-[data-app-theme="diagonal"] #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait
+[data-app-theme="dark"] #ssiOsWindowLayer.ssi-os-window-layer--video-signal-wait
   .ssi-os-no-signal-overlay::after {
   color: rgba(255, 210, 240, 0.75);
   text-shadow:
@@ -910,7 +910,7 @@ html.ssi-app-init-pending #startHint {
 
 /* ── Beat overlay plus fluide (Diagonal) ─────────────────────────
    Flash plus doux, fondu plus long → aspect cinéma/projecteur */
-[data-app-theme="diagonal"] .beat-overlay {
+[data-app-theme="dark"] .beat-overlay {
   background: radial-gradient(
     circle at center,
     rgba(240, 64, 176, 0.18) 0%,
@@ -920,13 +920,13 @@ html.ssi-app-init-pending #startHint {
   transition: opacity 0.55s ease-in-out;
 }
 
-[data-app-theme="diagonal"] .beat-overlay.flash {
+[data-app-theme="dark"] .beat-overlay.flash {
   opacity: 0.16;
   transition: opacity 0.09s ease-out;
 }
 
 /* CRT bruit — teinte rose Diagonal */
-[data-app-theme="diagonal"] .crt-noise {
+[data-app-theme="dark"] .crt-noise {
   background-image:
     radial-gradient(circle at 0 0, rgba(240, 64, 176, 0.12) 0, transparent 55%),
     radial-gradient(circle at 100% 0, rgba(0, 0, 0, 0.14) 0, transparent 55%),
@@ -941,14 +941,14 @@ html.ssi-app-init-pending #startHint {
 }
 
 /* CRT vignette — centre rose Diagonal */
-[data-app-theme="diagonal"] .crt-vignette {
+[data-app-theme="dark"] .crt-vignette {
   background:
     radial-gradient(circle at center, rgba(255, 255, 255, 0.04) 0, transparent 55%, transparent 70%, rgba(0, 0, 0, 0.75) 100%),
     radial-gradient(circle at center, rgba(240, 64, 176, 0.14) 0, transparent 60%);
 }
 
 /* Indicateur "clic pour démarrer" — Diagonal */
-[data-app-theme="diagonal"] .start-hint span {
+[data-app-theme="dark"] .start-hint span {
   color: #f040b0;
   text-shadow: 0 0 18px #f040b0, 0 0 40px #000000;
   border-color: rgba(240, 64, 176, 0.5);
@@ -962,11 +962,11 @@ html.ssi-app-init-pending #startHint {
 /* Webcam Diagonal : rendu identique à SSI (filtre Kodak warm, overlay VHS standard) */
 
 /* Bandeau opérateur — Diagonal */
-[data-app-theme="diagonal"] .live-status {
+[data-app-theme="dark"] .live-status {
   border-color: rgba(240, 64, 176, 0.4);
 }
 
-[data-app-theme="diagonal"] .live-status--warn {
+[data-app-theme="dark"] .live-status--warn {
   border-color: rgba(240, 64, 176, 0.65);
   color: #ffffff;
   text-shadow: 0 0 12px rgba(240, 64, 176, 0.5);

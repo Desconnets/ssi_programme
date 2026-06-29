@@ -46,6 +46,43 @@ SNAKE (~30 s × 3 tours) → SUPER BOOM (~10 s) → FENÊTRE VIDÉO → LOGO (~2
 | **`CHANGELOG.md`** | Journal complet des évolutions. |
 | **`ROADMAP.md`** | Étapes techniques réalisées + pistes optionnelles. |
 
+
+---
+
+## Ce qu'on a fait — juin 2026
+
+J'ai refait l'organisation complète des médias et du système de sélection de contenu.
+
+### Architecture des fichiers média
+
+```
+content/
+  logos/classique/     SSI-logo*.gif
+  logos/dark/          SSI-logo*_techno.gif
+  classique/
+    stickers/  boom/  jeux-video/  pop-culture/  doux/
+    videos/    boom/  jeux-video/  pop-culture/
+    backgrounds/  boom/  doux/  urban/  jeux-video/  pop-culture/
+  dark/
+    (mêmes catégories avec fichiers _techno glitchés)
+```
+
+### Moods et catégories
+**2 moods** : ☀ Classique (SSI) / ⚡ Dark (glitché, électrique)  
+**5 catégories** : boom · jeux-video · pop-culture · urban · doux
+
+### Comment étendre facilement
+
+**Ajouter un mood** : créer `content/nouveau-mood/stickers/`, `content/nouveau-mood/videos/`, `content/nouveau-mood/backgrounds/`, ajouter ses règles CSS `[data-app-theme="nouveau-mood"]`, mettre à jour `VALID_MOODS` dans `phase_remote_state.py`.
+
+**Ajouter une catégorie** : créer le sous-dossier dans `content/classique/stickers/ma-categorie/` et `content/dark/...`. Le bouton apparaît automatiquement dans la télécommande, aucun code à toucher.
+
+**Ajouter du contenu** : déposer des fichiers dans le bon dossier, relancer le serveur. Les `.mov`, `.gif` sont convertis automatiquement.
+
+### Ce qu'il reste à faire
+- 🎨 **Design du mood dark** : le CSS existe (`[data-app-theme="dark"]`) mais les effets visuels (CRT, fenêtre, beat overlay) sont encore trop proches du classique. Il faut les rendre plus intenses, plus électriques, plus glitchés.
+- 🎬 **Animations dédiées dark** : pas encore codées — les phases (snake, boom, logo) utilisent les mêmes animations pour les deux moods. Prévu pour une prochaine session.
+
 ---
 
 ## Installation

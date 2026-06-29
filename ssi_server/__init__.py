@@ -36,8 +36,9 @@ phase_video_convert.py
 
 fsutil.py
     Utilitaires de listage de fichiers par extension.
-    list_files()        → liste simple dans un dossier
-    list_files_themed() → liste depuis dossier/{theme}/ avec repli sur racine si vide.
+    list_files()           → liste simple dans un dossier (legacy/fallback)
+    list_content_files()   → liste depuis content/{mood}/{type}/{content_set}/ avec repli 3 niveaux
+    get_available_content_sets() → découverte auto des content sets disponibles
 
 normalize.py
     Utilitaires ffmpeg : find_ffmpeg(), try_install_ffmpeg().

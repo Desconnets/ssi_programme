@@ -192,6 +192,8 @@ async function bootstrap() {
   const videoMutedCheck = /** @type {HTMLInputElement} */ (document.getElementById('panelVideoMuted'));
   const btnThemeSsi = document.getElementById('btnThemeSsi');
   const btnThemeDiagonal = document.getElementById('btnThemeDiagonal');
+  const panelContentSets = document.getElementById('panelContentSets');
+  const btnContentSetNone = document.getElementById('btnContentSetNone');
   const btnPausePhases = document.getElementById('btnPausePhases');
 
   if (
@@ -213,7 +215,9 @@ async function bootstrap() {
     !btnThemeSsi ||
     !btnThemeDiagonal ||
     !btnPausePhases ||
-    !videoMutedCheck
+    !videoMutedCheck ||
+    !panelContentSets ||
+    !btnContentSetNone
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -275,10 +279,15 @@ async function bootstrap() {
       /* Sync case muet vidéo */
       videoMutedCheck.checked = j.videoMuted !== false;
 
-      /* Sync boutons thème */
-      const activeTheme = typeof j.theme === 'string' ? j.theme : 'ssi';
-      btnThemeSsi.classList.toggle('active', activeTheme === 'ssi');
-      btnThemeDiagonal.classList.toggle('active', activeTheme === 'diagonal');
+      /* Sync boutons mood */
+      const activeTheme = typeof j.theme === 'string' ? j.theme : 'classique';
+      btnThemeSsi.classList.toggle('active', activeTheme === 'classique');
+      btnThemeDiagonal.classList.toggle('active', activeTheme === 'dark');
+
+      /* Sync content sets — génère les boutons dynamiquement */
+      const activeCSet = typeof j.contentSet === 'string' ? j.contentSet : '';
+      const available = Array.isArray(j.availableContentSets) ? j.availableContentSets : [];
+      syncContentSetButtons(available, activeCSet);
 
       /* Sync bouton pause */
       const isPaused = Boolean(j.phasesPaused);
@@ -343,14 +352,63 @@ async function bootstrap() {
     }
   });
 
+  /** Génère (ou met à jour) les boutons de content sets depuis la liste API. */
+  let _lastContentSetList = '';
+  const syncContentSetButtons = (available, activeCSet) => {
+    const key = available.join(',');
+    if (key !== _lastContentSetList) {
+      _lastContentSetList = key;
+      // Vider sauf le bouton "Racine"
+      [...panelContentSets.querySelectorAll('.content-set-btn:not(#btnContentSetNone)')].forEach(b => b.remove());
+      for (const cs of available) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'content-set-btn';
+        btn.dataset.cs = cs;
+        btn.textContent = cs;
+        btn.addEventListener('click', () => sendContentSet(cs));
+        panelContentSets.appendChild(btn);
+      }
+    }
+    // Mettre à jour l'état actif
+    btnContentSetNone.classList.toggle('active', activeCSet === '');
+    panelContentSets.querySelectorAll('.content-set-btn[data-cs]').forEach(b => {
+      b.classList.toggle('active', b.dataset.cs === activeCSet);
+    });
+  };
+
+  const sendContentSet = async (cs) => {
+    log.append('cmd', 'Content set', cs || '(racine)');
+    try {
+      const res = await postRemote({ contentSet: cs });
+      if (res.ok && res.json) {
+        const active = res.json.contentSet || '';
+        btnContentSetNone.classList.toggle('active', active === '');
+        panelContentSets.querySelectorAll('.content-set-btn[data-cs]').forEach(b => {
+          b.classList.toggle('active', b.dataset.cs === active);
+        });
+        log.append('ok', `contenu→${active || 'racine'} seq=${res.json.seq}`);
+        statusLine.textContent = `seq=${res.json.seq} · contenu=${active || 'racine'}`;
+        void refresh();
+      } else {
+        log.append('err', `HTTP ${res.status}`, res.text.slice(0, 500));
+      }
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST contentSet', m);
+    }
+  };
+
+  btnContentSetNone.addEventListener('click', () => sendContentSet(''));
+
   const sendTheme = async (theme) => {
     log.append('cmd', 'Thème identité', theme);
     try {
       const res = await postRemote({ theme });
       if (res.ok && res.json) {
         const t = res.json.theme || theme;
-        btnThemeSsi.classList.toggle('active', t === 'ssi');
-        btnThemeDiagonal.classList.toggle('active', t === 'diagonal');
+        btnThemeSsi.classList.toggle('active', t === 'classique');
+        btnThemeDiagonal.classList.toggle('active', t === 'dark');
         log.append('ok', `thème→${t} seq=${res.json.seq}`);
         statusLine.textContent = `seq=${res.json.seq} · thème=${t}`;
         /* Rafraîchir les listes de fichiers (vidéos phase + fonds) du nouveau thème */
@@ -379,8 +437,8 @@ async function bootstrap() {
     }
   });
 
-  btnThemeSsi.addEventListener('click', () => sendTheme('ssi'));
-  btnThemeDiagonal.addEventListener('click', () => sendTheme('diagonal'));
+  btnThemeSsi.addEventListener('click', () => sendTheme('classique'));
+  btnThemeDiagonal.addEventListener('click', () => sendTheme('dark'));
 
   btnPausePhases.addEventListener('click', async () => {
     const nowPaused = btnPausePhases.textContent.includes('Pause');

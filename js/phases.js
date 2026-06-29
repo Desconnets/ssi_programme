@@ -617,8 +617,10 @@ function startSuperBoom() {
 
   superBoomTimer = setTimeout(() => {
     inSuperBoom = false;
-    clearStickers();
-    startOsWindowPhase();
+    /* Attendre que les stickers du boom aient fini de sortir avant d'ouvrir la fenêtre vidéo */
+    animateStickersOut(() => {
+      startOsWindowPhase();
+    });
   }, SUPER_BOOM_DURATION_MS);
 }
 
