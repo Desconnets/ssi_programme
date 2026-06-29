@@ -505,16 +505,6 @@ body.ssi-micro-audio #btnNext {
   text-align: center;
   font-family: inherit; /* or a custom font */
   white-space: pre-line;
-  animation: floatScale 3.5s ease-in-out infinite;
-}
-
-@keyframes floatScale {
-  0%, 100% { 
-    transform: translateY(0px) scale(1);
-  }
-  50% { 
-    transform: translateY(-15px) scale(1.05);
-  }
 }
 
 /* Phase webcam : au-dessus de la fenêtre OS si les deux coexistaient (normalement exclusives) */

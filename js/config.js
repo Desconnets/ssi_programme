@@ -11,7 +11,7 @@ export const BASS_BEAT_THRESHOLD = 0.58;
 export const BASS_BEAT_COOLDOWN_MS = 140;
 
 // Thèmes de fond : clair / sombre / intermédiaire
-export const BG_THEMES = ['dark', 'light', 'mid'];
+export const BG_THEMES = ["dark", "light", "mid"];
 export const BG_THEME_INTERVAL_MS = 52000;
 
 /** Fond vidéo : rotation automatique si plusieurs fichiers dans backgrounds/ (ms). */
@@ -83,7 +83,7 @@ export const LOGO_PHASE_DURATION_MS = 26000;
 /** Phase webcam (après logo) — durée puis retour snake ; pas de réglage serveur */
 export const WEBCAM_PHASE_DURATION_MS = 22000;
 /** Phase Text - durée puis retour snake */
-export const TEXT_PHASE_DURATION_MS = 10000;
+export const TEXT_PHASE_DURATION_MS = 9999000;
 /** Phase « fausse fenêtre » : garde-fou si jamais `ended` ne part pas */
 export const OS_WINDOW_PHASE_MAX_MS = 600000;
 /**
@@ -137,7 +137,8 @@ export const MUSIC_DUCK_FOR_JINGLE_MS = 380;
  *
  * Pour changer plus tard : modifier ici, ou étendre le serveur pour renvoyer ce réglage dans `/api/settings`.
  */
-export const PLAYLIST_ORDER_MODE = /** @type {'shuffle_once' | 'api_order' | 'custom'} */ ('shuffle_once');
+export const PLAYLIST_ORDER_MODE =
+  /** @type {'shuffle_once' | 'api_order' | 'custom'} */ ("shuffle_once");
 
 /**
  * Mode `'custom'` uniquement : indices des pistes dans l’ordre souhaité.

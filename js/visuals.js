@@ -7,6 +7,7 @@ import { lerp } from './utils.js';
 import { getAudioLevels } from './audio.js';
 import { applyStickerBehavior } from './behaviors.js';
 import { isOsWindowShakeActive, isWebcamPhaseActive } from './phases.js';
+import { isTextPhaseActive, applyTextPulse } from './text-phase.js';
 
 const stickersLayer = document.getElementById('stickersLayer');
 const background = document.getElementById('background');
@@ -51,6 +52,10 @@ function tick(now = 0) {
   stickersLayer.querySelectorAll('.sticker').forEach((sticker) => {
     applyStickerBehavior(sticker, levels, t);
   });
+
+  if (isTextPhaseActive()) {
+    applyTextPulse(levels, t);
+  }
 
   const osShaker = osWindowLayerEl?.querySelector('.ssi-os-window-shaker');
   const webcamShaker = webcamLayerEl?.querySelector('.ssi-os-window-shaker');
