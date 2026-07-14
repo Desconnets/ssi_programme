@@ -885,13 +885,6 @@ function clampPhaseVideoIndex(idx) {
 
 /** Reprise boucle standard (snake) après délai sans commande télécommande. */
 export function forceIdleResumeStandardCycle() {
-  /*interruptAllPhases(() => {
-    snakeCyclesDone = 0;
-    currentSnakeSetIndex = 0;
-    prepareSnakeSet();
-    startPhase(PHASE.SNAKE);
-    //playNextSnakeSticker();
-  });*/
   startPhase(pickNextPhase());
 }
 

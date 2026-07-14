@@ -73,7 +73,6 @@ export function pickNextPhase() {
 
   // random element
   if (phaseSelectMode === 'random') {
-    console.log("mode random")
     const others = pool.filter((p) => p !== currentPhase);
     const choices = others.length ? others : pool;
     return choices[Math.floor(Math.random() * choices.length)];
@@ -82,7 +81,6 @@ export function pickNextPhase() {
   const idx = PHASE_ORDER.indexOf(currentPhase);
   for (let step = 1; step <= PHASE_ORDER.length; step++) {
     const candidate = PHASE_ORDER[(idx + step) % PHASE_ORDER.length];
-    console.log("checking for next sequential", candidate, enabledPhases);
     if (enabledPhases.has(candidate)) return candidate;
   }
   return pool[0];
