@@ -11,14 +11,15 @@ import {
   OS_WINDOW_DIAGONAL_MIN_LOOP_MS,
 } from './config.js';
 import {
-  applyRemotePhaseCommand,
   forceIdleResumeStandardCycle,
+  interruptAllPhases,
   initStickers,
   initPhaseVideos,
   setOsWindowMinLoopMs,
   setPhasePaused,
   setOsWindowVideoMuted,
 } from './phases.js';
+import { setPhaseAutoAdvance, startPhase } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
 
 const ENDPOINT = '/api/phase-remote';
@@ -53,6 +54,7 @@ export function startPhaseRemotePolling() {
   let lastAppliedContentSet = null;
   /** État pause phases appliqué sur la page scène. */
   let lastAppliedPaused = null;
+  let lastAppliedAutoAdvance = null;
   /** État mute vidéo appliqué sur la page scène. */
   let lastAppliedVideoMuted = null;
   /** @type {AbortController | null} */
@@ -82,7 +84,7 @@ export function startPhaseRemotePolling() {
           lastAppliedPhaseCommandSeq = pcs;
           const ph = data.phase;
           if (ph) {
-            applyRemotePhaseCommand(ph, data.videoIndex);
+            startPhase(ph, { videoIndex: data.videoIndex });
           }
         }
       }
@@ -99,6 +101,12 @@ export function startPhaseRemotePolling() {
       if (isPaused !== lastAppliedPaused) {
         lastAppliedPaused = isPaused;
         setPhasePaused(isPaused);
+      }
+
+      const isAutoAdvance = data.phaseAutoAdvance !== false;
+      if (isAutoAdvance !== lastAppliedAutoAdvance) {
+        lastAppliedAutoAdvance = isAutoAdvance;
+        setPhaseAutoAdvance(isAutoAdvance);
       }
 
       /* Mood visuel (classique / dark) + content set — calculer les changements AVANT de mettre à jour */
@@ -137,8 +145,8 @@ export function startPhaseRemotePolling() {
         const stale = Date.now() - ts > idleMs;
         if (stale && idleFiredForLastCommandMs !== ts) {
           idleFiredForLastCommandMs = ts;
-          /* Ne pas relancer le cycle si les phases sont en pause */
-          if (!data.phasesPaused) {
+          /* Ne pas relancer le cycle si les phases sont en pause ou si on est en mode manuel */
+          if (!data.phasesPaused && data.phaseAutoAdvance !== false) {
             forceIdleResumeStandardCycle();
           }
         }

@@ -195,6 +195,7 @@ async function bootstrap() {
   const panelContentSets = document.getElementById('panelContentSets');
   const btnContentSetNone = document.getElementById('btnContentSetNone');
   const btnPausePhases = document.getElementById('btnPausePhases');
+  const btnAutoAdvance = document.getElementById('btnAutoAdvance');
 
   if (
     !logEl ||
@@ -215,6 +216,7 @@ async function bootstrap() {
     !btnThemeSsi ||
     !btnThemeDiagonal ||
     !btnPausePhases ||
+    !btnAutoAdvance ||
     !videoMutedCheck ||
     !panelContentSets ||
     !btnContentSetNone
@@ -293,6 +295,10 @@ async function bootstrap() {
       const isPaused = Boolean(j.phasesPaused);
       btnPausePhases.textContent = isPaused ? '▶ Reprendre les phases' : '⏸ Pause phases (fond uniquement)';
       btnPausePhases.style.background = isPaused ? '#2a6e2a' : '';
+
+      const isAuto = j.phaseAutoAdvance !== false;
+      btnAutoAdvance.textContent = isAuto ? '🔁 Auto (avance les phases)' : '✋ Manuel (reste sur la phase)';
+      btnAutoAdvance.style.background = isAuto ? '' : '#6e2a2a';
 
       bgAuto.checked = Boolean(j.backgroundAutoRotate);
       const nBg = bgFiles.length;
@@ -460,6 +466,27 @@ async function bootstrap() {
       log.append('err', 'POST pause', m);
     }
   });
+
+      btnAutoAdvance.addEventListener('click', async () => {
+      const nowAuto = !btnAutoAdvance.textContent.includes('Manuel');
+      const next = !nowAuto;
+      log.append('cmd', next ? 'Mode auto' : 'Mode manuel');
+      try {
+        const res = await postRemote({ phaseAutoAdvance: next });
+        if (res.ok && res.json) {
+          const a = res.json.phaseAutoAdvance !== false;
+          btnAutoAdvance.textContent = a ? '🔁 Auto (avance les phases)' : '✋ Manuel (reste sur la phase)';
+          btnAutoAdvance.style.background = a ? '' : '#6e2a2a';
+          log.append('ok', a ? 'Avance automatique' : 'Reste sur la phase');
+          statusLine.textContent = `seq=${res.json.seq} · ${a ? 'auto' : 'manuel'}`;
+        } else {
+          log.append('err', `HTTP ${res.status}`, res.text.slice(0, 500));
+        }
+      } catch (e) {
+        const m = e && e.message ? e.message : String(e);
+        log.append('err', 'POST auto/manuel', m);
+      }
+    });
 
   btnIdleResumeApply.addEventListener('click', async () => {
     let sec = parseInt(idleResumeSec.value, 10);

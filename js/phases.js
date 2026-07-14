@@ -846,7 +846,7 @@ function runWhenBothOsWebcamClosed(done) {
  * Arrête timers et ferme calques avec les mêmes animations / sorties stickers que le cycle normal.
  * @param {() => void} done
  */
-function interruptAllPhases(done) {
+export function interruptAllPhases(done) {
   const myGen = ++remoteInterruptGen;
 
   if (snakeTimer) {
@@ -883,65 +883,16 @@ function clampPhaseVideoIndex(idx) {
   return Math.max(0, Math.min(phaseVideoUrls.length - 1, i));
 }
 
-/**
- * Télécommande HTTP : interrompt le cycle en cours puis lance la phase demandée (mêmes animations).
- * @param {string} phase snake | super_boom | os_video | logo | webcam
- * @param {number | null | undefined} [videoIndex] index dans la liste API phase-videos (os_video)
- */
-// ═══════════════════════════════════════════════════════════════════════════
-//  TÉLÉCOMMANDE — commandes distantes (phase-remote.js → ici)
-//  Ajouter une phase : VALID_PHASES + PANEL_PHASE_* dans phase_remote_state.py
-//  + un cas dans applyRemotePhaseCommand() + startXxxPhase() ici
-// ═══════════════════════════════════════════════════════════════════════════
-export function applyRemotePhaseCommand(phase, videoIndex) {
-  const p = String(phase || '')
-    .toLowerCase()
-    .replace(/-/g, '_');
-  const known = new Set(['snake', 'super_boom', 'os_video', 'logo', 'webcam']);
-  if (!known.has(p)) {
-    debugWarn('[SSI] Télécommande phase inconnue :', phase);
-    return;
-  }
-  interruptAllPhases(() => {
-    if (p === 'snake') {
-      snakeCyclesDone = 0;
-      currentSnakeSetIndex = 0;
-      prepareSnakeSet();
-      startPhase(PHASE.SNAKE);
-      return;
-    }
-    if (p === 'super_boom') {
-      startPhase(PHASE.SUPER_BOOM);
-      return;
-    }
-    if (p === 'os_video') {
-      const url = phaseVideoUrls.length ? phaseVideoUrls[clampPhaseVideoIndex(videoIndex)] : null;
-      if (url) {
-        startPhase(PHASE.VIDEO, {forcedUrl: url})
-      } else {
-        reportLiveEvent('os_window_skip', { reason: 'telecommande_sans_video' });
-        startPhase(PHASE.LOGO);
-      }
-      return;
-    }
-    if (p === 'logo') {
-      startPhase(PHASE.LOGO);
-      return;
-    }
-    if (p === 'webcam') {
-      startPhase(PHASE.WEBCAM);
-    }
-  });
-}
-
 /** Reprise boucle standard (snake) après délai sans commande télécommande. */
 export function forceIdleResumeStandardCycle() {
-  interruptAllPhases(() => {
+  /*interruptAllPhases(() => {
     snakeCyclesDone = 0;
     currentSnakeSetIndex = 0;
     prepareSnakeSet();
-    playNextSnakeSticker();
-  });
+    startPhase(PHASE.SNAKE);
+    //playNextSnakeSticker();
+  });*/
+  startPhase(PHASE.SNAKE);
 }
 
 /**
@@ -957,10 +908,7 @@ export function setPhasePaused(paused) {
     /* Passer par interruptAllPhases pour s'assurer qu'aucune animation
        de la pause précédente n'est encore en cours avant de redémarrer. */
     interruptAllPhases(() => {
-      snakeCyclesDone = 0;
-      currentSnakeSetIndex = 0;
-      prepareSnakeSet();
-      playNextSnakeSticker();
+      startPhase(PHASE.SNAKE);
     });
   }
 }
@@ -1066,9 +1014,11 @@ export function startWebcamPhase() {
  * @param {{ forcedUrl?: string | null }} [opts] forcedUrl — vidéo imposée (télécommande), sinon file comme après Super Boom.
  */
 export function startOsWindowPhase(opts = {}) {
-  const forcedUrl =
+  let forcedUrl =
     typeof opts.forcedUrl === 'string' && opts.forcedUrl.length > 0 ? opts.forcedUrl : null;
-
+  if (!forcedUrl && opts.videoIndex != null && phaseVideoUrls.length) {
+    forcedUrl = phaseVideoUrls[clampPhaseVideoIndex(opts.videoIndex)];
+  }
   if (!forcedUrl && !phaseVideoUrls.length) {
     reportLiveEvent('os_window_skip', { reason: 'aucune_vidéo' });
     debugLog('[SSI] Phase fenêtre OS : aucun fichier dans phase_videos/ → enchaînement logo');
