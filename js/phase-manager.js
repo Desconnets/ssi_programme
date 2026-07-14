@@ -17,15 +17,17 @@ export const PHASE_ORDER = [
     PHASE.WEBCAM
 ];
 
-export const DEFAULT_PHASE = PHASE.SNAKE;
+let phaseSelectMode = 'sequential'; // 'sequential' | 'random'
+let enabledPhases = new Set(PHASE_ORDER);
 
-export let currentPhase = PHASE.SNAKE;
+export const DEFAULT_PHASE = PHASE.SNAKE;
+export let currentPhase = DEFAULT_PHASE;
 
 let currentPhaseTimeout = null;
 let autoAdvanceEnabled = true;
 
 export function startPhase(phase, params){
-     if(currentPhaseTimeout){
+    if(currentPhaseTimeout){
         clearTimeout(currentPhaseTimeout);
         currentPhaseTimeout = null;
     }
@@ -58,16 +60,43 @@ export function startPhase(phase, params){
  * Switches to the next phase and loop back to first one once phase list ended
  */
 export function onPhaseEnded(){
-    console.log("AUTO ADVANCE ENABLED? ", autoAdvanceEnabled);
     if(!autoAdvanceEnabled){
         startPhase(currentPhase);
         return;
     }
-    const idx = PHASE_ORDER.indexOf(currentPhase);
-    const next = PHASE_ORDER[(idx + 1) % PHASE_ORDER.length];
-    startPhase(next);
+    startPhase(pickNextPhase());
+}
+
+export function pickNextPhase() {
+  const pool = PHASE_ORDER.filter((p) => enabledPhases.has(p));
+  if (!pool.length) return PHASE_ORDER[0];
+
+  // random element
+  if (phaseSelectMode === 'random') {
+    console.log("mode random")
+    const others = pool.filter((p) => p !== currentPhase);
+    const choices = others.length ? others : pool;
+    return choices[Math.floor(Math.random() * choices.length)];
+  }
+
+  const idx = PHASE_ORDER.indexOf(currentPhase);
+  for (let step = 1; step <= PHASE_ORDER.length; step++) {
+    const candidate = PHASE_ORDER[(idx + step) % PHASE_ORDER.length];
+    console.log("checking for next sequential", candidate, enabledPhases);
+    if (enabledPhases.has(candidate)) return candidate;
+  }
+  return pool[0];
 }
 
 export function setPhaseAutoAdvance(enabled) {
   autoAdvanceEnabled = Boolean(enabled);
+}
+
+export function setPhaseSelectMode(mode) {
+  phaseSelectMode = mode === 'random' ? 'random' : 'sequential';
+}
+
+export function setEnabledPhases(ids) {
+  const next = new Set((ids || []).filter((id) => PHASE_ORDER.includes(id)));
+  enabledPhases = next.size > 0 ? next : new Set(PHASE_ORDER);
 }

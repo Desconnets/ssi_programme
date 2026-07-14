@@ -56,7 +56,7 @@ import { attachVideoLoadListeners } from './video-load-log.js';
 import { attachVideoLifecycle } from './video-lifecycle.js';
 import { abortBrowserMediaWarm } from './browser-cache-warm.js';
 import { startWebcamGrainLoop, stopWebcamGrainLoop } from './webcam-grain.js';
-import { onPhaseEnded, startPhase } from './phase-manager.js';
+import { onPhaseEnded, startPhase, pickNextPhase } from './phase-manager.js';
 import { PHASE } from './phase-manager.js';
 
 const stickersLayer = document.getElementById('stickersLayer');
@@ -350,7 +350,7 @@ function startVisualCycle() {
   if (!snakeSet.length && allStickerUrls.length) {
     prepareSnakeSet();
   }
-  startPhase(PHASE.SNAKE);
+  startPhase(pickNextPhase());
 }
 
 export function playNextSnakeSticker() {
@@ -892,7 +892,7 @@ export function forceIdleResumeStandardCycle() {
     startPhase(PHASE.SNAKE);
     //playNextSnakeSticker();
   });*/
-  startPhase(PHASE.SNAKE);
+  startPhase(pickNextPhase());
 }
 
 /**
@@ -908,7 +908,7 @@ export function setPhasePaused(paused) {
     /* Passer par interruptAllPhases pour s'assurer qu'aucune animation
        de la pause précédente n'est encore en cours avant de redémarrer. */
     interruptAllPhases(() => {
-      startPhase(PHASE.SNAKE);
+      startPhase(pickNextPhase());
     });
   }
 }

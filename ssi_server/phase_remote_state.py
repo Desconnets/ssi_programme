@@ -59,6 +59,13 @@ _video_muted: bool = True
 
 VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam'})
 
+# Phases proposées par la sélection automatique (séquentielle ou aléatoire).
+# Désactiver une phase ne l'empêche pas d'être déclenchée manuellement.
+_enabled_phases: set[str] = set(VALID_PHASES)
+
+VALID_PHASE_SELECT_MODES = frozenset({'sequential', 'random'})
+_phase_select_mode: str = 'sequential'
+
 # Ordre des boutons dans phase_panel.html / futurs clients — ajouter une phase : VALID_PHASES + ce tuple + libellé.
 PANEL_PHASE_ORDER: tuple[str, ...] = (
     'snake',
@@ -181,6 +188,8 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'phasesPaused': _phases_paused,
         'videoMuted': _video_muted,
         'phaseAutoAdvance': _phases_auto_advance,
+        'enabledPhases': [p for p in PANEL_PHASE_ORDER if p in _enabled_phases],
+        'phaseSelectMode': _phase_select_mode,
     }
 
 
@@ -206,6 +215,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     """
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
     global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set, _phases_auto_advance
+    global _enabled_phases, _phase_select_mode
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -221,13 +231,15 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_auto_advance = 'phaseAutoAdvance' in data
     has_video_muted = 'videoMuted' in data
     has_content_set = 'contentSet' in data
+    has_enabled_phases = 'enabledPhases' in data
+    has_select_mode = 'phaseSelectMode' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
             and not has_idle_resume and not has_theme and not has_pause \
-            and not has_auto_advance \
+            and not has_auto_advance and not has_enabled_phases and not has_select_mode \
             and not has_video_muted and not has_content_set:
         raise ValueError(
-            'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, '
+            'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, enabledPhases, phaseSelectMode'
             'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet'
         )
 
@@ -295,6 +307,24 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
                 # Invalider les caches de listes médias pour forcer un re-scan
                 _pv_list_cache = None
                 _bg_list_cache = None
+        
+        if has_enabled_phases:
+            raw = data.get('enabledPhases')
+            if not isinstance(raw, list):
+                raise ValueError('enabledPhases doit être une liste de phases')
+            cleaned = {str(p).strip().lower().replace('-', '_') for p in raw}
+            invalid = cleaned - VALID_PHASES
+            if invalid:
+                raise ValueError(f'enabledPhases invalide(s): {sorted(invalid)} (attendu: {sorted(VALID_PHASES)})')
+            if not cleaned:
+                raise ValueError('enabledPhases ne peut pas être vide (au moins une phase active)')
+            _enabled_phases = cleaned
+
+        if has_select_mode:
+            m = str(data.get('phaseSelectMode', '')).strip().lower()
+            if m not in VALID_PHASE_SELECT_MODES:
+                raise ValueError(f'phaseSelectMode invalide: {m!r} (valeurs: {sorted(VALID_PHASE_SELECT_MODES)})')
+            _phase_select_mode = m
 
         if has_pause:
             _phases_paused = bool(data.get('pausePhases'))

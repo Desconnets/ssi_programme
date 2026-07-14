@@ -154,17 +154,29 @@ function fillBackgroundSelect(select, files) {
  * @param {Array<{ id: string, label: string, needsVideoIndex?: boolean, hint?: string }>} phases
  * @param {(meta: { id: string, label: string, needsVideoIndex?: boolean }) => void} onPhase
  */
-function renderPhaseButtons(container, phases, onPhase) {
-  container.replaceChildren();
+function renderPhaseButtons(container, phases, onPhase, enabledIds, onToggleEnabled) {
+   container.replaceChildren();
   for (const p of phases) {
+    const row = document.createElement('div');
+    row.className = 'panel-row';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = enabledIds.has(p.id);
+    cb.title = 'Active dans le cycle automatique (séquentiel / aléatoire)';
+    cb.addEventListener('change', () => onToggleEnabled(p.id, cb.checked, cb));
+
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'panel-action-btn';
     b.dataset.phaseId = p.id;
     b.textContent = p.label;
     if (p.hint) b.title = p.hint;
+    b.style.flex = '1';
     b.addEventListener('click', () => onPhase(p));
-    container.appendChild(b);
+
+    row.append(cb, b);
+    container.appendChild(row);
   }
 }
 
@@ -196,6 +208,7 @@ async function bootstrap() {
   const btnContentSetNone = document.getElementById('btnContentSetNone');
   const btnPausePhases = document.getElementById('btnPausePhases');
   const btnAutoAdvance = document.getElementById('btnAutoAdvance');
+  const btnPhasesSelectMode = document.getElementById('btnPhaseSelectMode');
 
   if (
     !logEl ||
@@ -219,7 +232,8 @@ async function bootstrap() {
     !btnAutoAdvance ||
     !videoMutedCheck ||
     !panelContentSets ||
-    !btnContentSetNone
+    !btnContentSetNone ||
+    !btnPhasesSelectMode
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -252,13 +266,26 @@ async function bootstrap() {
     }
   };
 
+  const onToggleEnabled = async (id, checked, cbEl) => {
+  const boxes = Array.from(actionsEl.querySelectorAll('input[type="checkbox"]'));
+  const nowChecked = boxes.filter((c) => c.checked).map((c) => c.closest('.panel-row').querySelector('[data-phase-id]').dataset.phaseId);
+    if (!checked && nowChecked.length === 0) {
+      cbEl.checked = true;
+      log.append('warn', 'Au moins une phase doit rester active');
+      return;
+    }
+    log.append('cmd', checked ? `Active ${id}` : `Désactive ${id}`);
+    const res = await postRemote({ enabledPhases: nowChecked });
+    logRemoteResult('POST enabledPhases', res);
+  };
+
   const refresh = async () => {
     try {
       const j = await fetchState();
       const phases =
         Array.isArray(j.panelPhases) && j.panelPhases.length > 0 ? j.panelPhases : FALLBACK_PANEL_PHASES;
 
-      renderPhaseButtons(actionsEl, phases, runPhase);
+      renderPhaseButtons(actionsEl, phases, runPhase, new Set(Array.isArray(j.enabledPhases) ? j.enabledPhases : phases.map((p) => p.id)), onToggleEnabled)
 
       fillVideoSelect(videoSelect, j.phaseVideoFiles || []);
       const bgFiles = j.backgroundVideoFiles || [];
@@ -300,6 +327,9 @@ async function bootstrap() {
       btnAutoAdvance.textContent = isAuto ? '🔁 Auto (avance les phases)' : '✋ Manuel (reste sur la phase)';
       btnAutoAdvance.style.background = isAuto ? '' : '#6e2a2a';
 
+      const isRandom = j.phaseSelectMode === 'random';
+      btnPhasesSelectMode.textContent = isRandom ? '🔀 Aléatoire' : '➡️ Séquentiel';
+  
       bgAuto.checked = Boolean(j.backgroundAutoRotate);
       const nBg = bgFiles.length;
       if (!j.backgroundAutoRotate && j.backgroundVideoIndex != null && nBg > 0) {
@@ -319,7 +349,7 @@ async function bootstrap() {
       const m = e && e.message ? e.message : String(e);
       log.append('err', 'GET /api/phase-remote', m);
       statusLine.textContent = m;
-      renderPhaseButtons(actionsEl, FALLBACK_PANEL_PHASES, runPhase);
+      renderPhaseButtons(actionsEl, phases, runPhase, new Set(Array.isArray(j.enabledPhases) ? j.enabledPhases : phases.map((p) => p.id)), onToggleEnabled)
     }
   };
 
@@ -467,7 +497,7 @@ async function bootstrap() {
     }
   });
 
-      btnAutoAdvance.addEventListener('click', async () => {
+    btnAutoAdvance.addEventListener('click', async () => {
       const nowAuto = !btnAutoAdvance.textContent.includes('Manuel');
       const next = !nowAuto;
       log.append('cmd', next ? 'Mode auto' : 'Mode manuel');
@@ -486,7 +516,27 @@ async function bootstrap() {
         const m = e && e.message ? e.message : String(e);
         log.append('err', 'POST auto/manuel', m);
       }
-    });
+  });
+
+  btnPhasesSelectMode.addEventListener('click', async () => {
+    const nowRandom = btnPhasesSelectMode.textContent.includes('Aléatoire');
+    const next = nowRandom ? 'sequential' : 'random';
+    log.append('cmd', next === 'random' ? 'Mode aléatoire' : 'Mode séquentiel');
+    try {
+      const res = await postRemote({ phaseSelectMode: next });
+      if (res.ok && res.json) {
+        const isRandom = res.json.phaseSelectMode === 'random';
+        btnPhasesSelectMode.textContent = isRandom ? '🔀 Aléatoire' : '➡️ Séquentiel';
+        log.append('ok', isRandom ? 'Sélection aléatoire' : 'Sélection séquentielle');
+        statusLine.textContent = `seq=${res.json.seq} · ${isRandom ? 'random' : 'sequential'}`;
+      } else {
+        log.append('err', `HTTP ${res.status}`, res.text.slice(0, 500));
+      }
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST phaseSelectMode', m);
+    }
+  });
 
   btnIdleResumeApply.addEventListener('click', async () => {
     let sec = parseInt(idleResumeSec.value, 10);

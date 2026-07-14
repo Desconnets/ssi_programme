@@ -19,7 +19,7 @@ import {
   setPhasePaused,
   setOsWindowVideoMuted,
 } from './phases.js';
-import { setPhaseAutoAdvance, startPhase } from './phase-manager.js';
+import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
 
 const ENDPOINT = '/api/phase-remote';
@@ -54,7 +54,12 @@ export function startPhaseRemotePolling() {
   let lastAppliedContentSet = null;
   /** État pause phases appliqué sur la page scène. */
   let lastAppliedPaused = null;
+  /** État du mode manuel/auto */
   let lastAppliedAutoAdvance = null;
+  /** État de la liste phases actives */
+  let lastAppliedEnabledPhases = null;
+  /** État du mode sequentiel/random */
+  let lastAppliedSelectMode = null;
   /** État mute vidéo appliqué sur la page scène. */
   let lastAppliedVideoMuted = null;
   /** @type {AbortController | null} */
@@ -107,6 +112,19 @@ export function startPhaseRemotePolling() {
       if (isAutoAdvance !== lastAppliedAutoAdvance) {
         lastAppliedAutoAdvance = isAutoAdvance;
         setPhaseAutoAdvance(isAutoAdvance);
+      }
+
+      const enabledPhasesData = Array.isArray(data.enabledPhases) ? data.enabledPhases : null;
+      const enabledKey = enabledPhasesData ? enabledPhasesData.join(',') : null;
+      if (enabledKey !== lastAppliedEnabledPhases) {
+        lastAppliedEnabledPhases = enabledKey;
+        if (enabledPhasesData) setEnabledPhases(enabledPhasesData);
+      }
+
+      const selectMode = data.phaseSelectMode === 'random' ? 'random' : 'sequential';
+      if (selectMode !== lastAppliedSelectMode) {
+        lastAppliedSelectMode = selectMode;
+        setPhaseSelectMode(selectMode);
       }
 
       /* Mood visuel (classique / dark) + content set — calculer les changements AVANT de mettre à jour */
