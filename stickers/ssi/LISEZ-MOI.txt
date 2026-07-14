@@ -1,8 +1,0 @@
-Dossier stickers — thème SSI
-============================
-Placez ici les images/GIFs du thème SSI (violet · turquoise · rose · jaune).
-Extensions acceptées : .png  .jpg  .jpeg  .gif  .webp
-
-Tant que ce dossier contient des fichiers, c'est lui qui est utilisé
-quand le thème "ssi" est actif sur la télécommande.
-Si le dossier est vide, le serveur replie sur stickers/ (racine).

@@ -54,7 +54,7 @@ def http_error(msg: str) -> None:
 
 
 def http_media(msg: str) -> None:
-    """Durée des GET musique / vidéos / virgules (voir SSI_HTTP_MEDIA_LOG=1)."""
+    """Durée des GET vidéos phase_videos/ et backgrounds/ (voir SSI_HTTP_MEDIA_LOG=1)."""
     print(f'{_ts()}  [SSI·HTTP·MEDIA]  {msg}', flush=True)
 
 

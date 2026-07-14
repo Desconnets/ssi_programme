@@ -1,5 +1,5 @@
 """
-phase_videos/ et backgrounds/ : export MP4 léger (H.264, sans piste audio), même résolution.
+phase_videos/ et backgrounds/ : export MP4 léger (H.264, avec audio si présent), même résolution.
 L’original est déplacé dans <dossier>/_archive/ ; la sortie est « … ok_converti.mp4 ».
 Ne bloque pas le démarrage du serveur si ffmpeg manque ou si un fichier échoue.
 """
@@ -52,14 +52,13 @@ def _encode_video_lite(ffmpeg: str, src_path: str, part_path: str, name: str) ->
 
     attempts: list[tuple[str, list[str]]] = [
         (
-            'H.264 + dimensions paires (yuv420p)',
+            'H.264 + dimensions paires (yuv420p) — audio conservé si présent',
             [
                 ffmpeg,
                 '-hide_banner',
                 '-y',
                 '-i',
                 src_abs,
-                '-an',
                 '-c:v',
                 'libx264',
                 '-crf',
@@ -84,7 +83,6 @@ def _encode_video_lite(ffmpeg: str, src_path: str, part_path: str, name: str) ->
                 '-y',
                 '-i',
                 src_abs,
-                '-an',
                 '-c:v',
                 'libx264',
                 '-crf',
@@ -110,7 +108,6 @@ def _encode_video_lite(ffmpeg: str, src_path: str, part_path: str, name: str) ->
                 src_abs,
                 '-map',
                 '0:v:0',
-                '-an',
                 '-c:v',
                 'libx264',
                 '-crf',
@@ -164,7 +161,7 @@ def _convert_directory_lite(directory: str) -> None:
     Pour chaque vidéo à la racine du dossier (pas _archive/) :
     - ignore les fichiers déjà marqués ok_converti ;
     - si « nom ok_converti.mp4 » existe déjà, ignore ;
-    - sinon encode en MP4 (CRF, sans audio), déplace l’original dans _archive/.
+    - sinon encode en MP4 (H.264, audio conservé si présent), déplace l’original dans _archive/.
     """
     try:
         if not os.path.isdir(directory):
@@ -197,7 +194,7 @@ def _convert_directory_lite(directory: str) -> None:
     all_names = list_files(directory, VIDEO_EXT)
     norm(
         f'Scan « {directory}/ » : {len(all_names)} vidéo(s) listée(s) '
-        f'— export MP4 léger (sans audio), archives → {ARCHIVE_SUBDIR}/'
+        f'— export MP4 (H.264, audio conservé), archives → {directory}/{ARCHIVE_SUBDIR}/'
     )
 
     n_skip_tag = 0
@@ -274,14 +271,41 @@ def _convert_theme_subdirs(directory: str) -> None:
             _convert_directory_lite(subdir)
 
 
+def _convert_content_dir(media_type: str) -> None:
+    """
+    Convertit les vidéos brutes dans toute la hiérarchie content/{mood}/{media_type}/.
+    Parcourt tous les moods et tous les content sets.
+    Les fichiers déjà tagués ok_converti sont ignorés automatiquement.
+    """
+    content_root = 'content'
+    if not os.path.isdir(content_root):
+        return
+    for mood in sorted(os.listdir(content_root)):
+        mood_path = os.path.join(content_root, mood)
+        if not os.path.isdir(mood_path) or mood.startswith('_'):
+            continue
+        type_path = os.path.join(mood_path, media_type)
+        if not os.path.isdir(type_path):
+            continue
+        # Fichiers directs dans content/{mood}/{media_type}/
+        _convert_directory_lite(type_path)
+        # Fichiers dans les sous-dossiers content set
+        for sub in sorted(os.listdir(type_path)):
+            sub_path = os.path.join(type_path, sub)
+            if os.path.isdir(sub_path) and not sub.startswith('_'):
+                _convert_directory_lite(sub_path)
+
+
 def convert_phase_videos_lite() -> None:
     _convert_directory_lite(PHASE_DIR)
     _convert_theme_subdirs(PHASE_DIR)
+    _convert_content_dir('videos')
 
 
 def convert_backgrounds_lite() -> None:
     _convert_directory_lite(BACKGROUNDS_DIR)
     _convert_theme_subdirs(BACKGROUNDS_DIR)
+    _convert_content_dir('backgrounds')
 
 
 def safe_convert_phase_videos_lite() -> None:

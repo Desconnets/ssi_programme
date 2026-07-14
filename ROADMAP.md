@@ -42,12 +42,38 @@
 | T5 | Panneau télécommande | ✅ | `phase_panel.html` (section + boutons stylés), `js/phase-panel-app.js` (POST + sync actif) |
 | T6 | Lanceur macOS double-clic | ✅ | `Lancer.command` (chmod +x, ouvre Terminal + serveur) |
 
+## Étapes juin 2026 — Archivage + vidéos avec audio
+
+| # | Étape | Statut | Notes |
+|---|-------|--------|-------|
+| M1 | Archiver mode playlist | ✅ | `archive/playlist-mode/` + README.txt |
+| M2 | Mode micro exclusif | ✅ | `runtime_config.py` simplifié, plus de prompt démarrage |
+| M3 | Retirer mini-contrôles | ✅ | `index.html`, `style.css`, `js/main.js` |
+| M4 | Vidéos avec audio | ✅ | `-an` retiré de `phase_video_convert.py` |
+| M5 | Bouton Muet télécommande | ✅ | `videoMuted` dans `phase_remote_state.py`, `phases.js`, `phase-panel-app.js` |
+| M6 | Nettoyage code (audit) | ✅ | `config.js`, `browser-cache-warm.js`, imports morts retirés |
+
+## Étapes juin 2026 v2 — Système content/mood/catégories
+
+| # | Étape | Statut | Notes |
+|---|-------|--------|-------|
+| C1 | Architecture `content/` | ✅ | `content/{mood}/{type}/{set}/` + `content/logos/` |
+| C2 | Moods classique/dark | ✅ | Remplacent ssi/diagonal. CSS `[data-app-theme="dark"]` |
+| C3 | 5 catégories de contenu | ✅ | boom / jeux-video / pop-culture / urban / doux |
+| C4 | Contenu _techno dark | ✅ | Versions glitchées de tous les stickers et vidéos classique |
+| C5 | Télécommande dynamique | ✅ | Boutons mood + content sets auto-détectés |
+| C6 | `fsutil.list_content_files()` | ✅ | Chargement 3 niveaux + logos toujours inclus |
+| C7 | Conversion dans `content/` | ✅ | `_convert_content_dir()` dans `phase_video_convert.py` |
+| C8 | Fix rechargement mood | ✅ | Flag calculé avant mise à jour état dans `phase-remote.js` |
+| C9 | Fix boom+vidéo simultanés | ✅ | `animateStickersOut(callback)` dans `phases.js` |
+
 ## Prochaines étapes possibles (optionnel)
 
 - [ ] Registre de comportements (map id → fonction) dans `behaviors.js`
-- [ ] Phases : enum / transitions nommées explicites dans `phases.js`
+- [ ] Nouvelles phases (prévu)
+- [ ] UX/UI télécommande : zone de texte en direct sur l'écran d'animation
+- [ ] Réactiver playlist pour vidéos avec audio (base dans `archive/playlist-mode/`)
 - [ ] Durcissement path traversal sur fichiers statiques si exposition réseau
-- [ ] Nouveau snapshot dans `archive/` après une grosse évolution
 - [ ] Thème par défaut configurable via variable d'env (`SSI_DEFAULT_THEME=diagonal`)
 
 ## Lancement

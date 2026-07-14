@@ -7,12 +7,10 @@ import time
 from http.server import ThreadingHTTPServer
 
 from .config import ROOT_DIR, PORT
-from .normalize import safe_normalize_audio_in_directory
 from .phase_video_convert import safe_convert_backgrounds_lite, safe_convert_phase_videos_lite
 from .handler import AppRequestHandler
 from .live_report import print_startup_inventory
 from .logutil import boot, boot_reset, info, pulse, sep, warn
-from .runtime_config import get_audio_input_mode, prompt_audio_input_choice
 
 
 class QuietHTTPServer(ThreadingHTTPServer):
@@ -133,33 +131,15 @@ def main() -> None:
     os.chdir(ROOT_DIR)
     boot(f'Répertoire racine : {ROOT_DIR}')
 
-    prompt_audio_input_choice()
-    boot('Choix source audio terminé (ou variable SSI_AUDIO_INPUT)')
+    # Mode audio : toujours micro (playlist archivée dans archive/playlist-mode/)
+    info('Mode audio : micro — effets visuels pilotés par le micro, pas de playlist.')
 
-    mode = get_audio_input_mode()
-    if mode == 'micro':
-        info(
-            'Mode micro : normalisation musique/ et virgules/ ignorée '
-            '(rien n’est lu depuis ces dossiers cette session). '
-            'Relancez en [1] pour préparer ou jouer les MP3.'
-        )
-        boot('Blocs musique/ + virgules/ sautés (mode micro)')
-    else:
-        info('Démarrage — normalisation audio (si ffmpeg dispo)…')
-        t0 = time.perf_counter()
-        safe_normalize_audio_in_directory('musique')
-        boot(f'Bloc musique/ terminé (durée de ce bloc : {time.perf_counter() - t0:.1f}s)')
-
-        t1 = time.perf_counter()
-        safe_normalize_audio_in_directory('virgules')
-        boot(f'Bloc virgules/ terminé (durée de ce bloc : {time.perf_counter() - t1:.1f}s)')
-
-    info('Conversion phase_videos/ → MP4 léger sans audio (archive _archive/)…')
+    info('Conversion phase_videos/ → MP4 léger (archive _archive/)…')
     t2 = time.perf_counter()
     safe_convert_phase_videos_lite()
     boot(f'Bloc phase_videos/ terminé (durée de ce bloc : {time.perf_counter() - t2:.1f}s)')
 
-    info('Conversion backgrounds/ → MP4 léger sans audio (archive _archive/)…')
+    info('Conversion backgrounds/ → MP4 léger (archive _archive/)…')
     t3 = time.perf_counter()
     safe_convert_backgrounds_lite()
     boot(f'Bloc backgrounds/ terminé (durée de ce bloc : {time.perf_counter() - t3:.1f}s)')
@@ -170,9 +150,7 @@ def main() -> None:
 
     server = QuietHTTPServer(('', PORT), AppRequestHandler)
     boot(f'Socket prêt sur le port {PORT} — prêt à accepter des connexions')
-    mode = get_audio_input_mode()
-    mode_txt = 'microphone (ambiant)' if mode == 'micro' else 'playlist (fichiers)'
-    info(f'Serveur HTTP actif  →  http://localhost:{PORT}  ·  effets audio : {mode_txt}')
+    info(f'Serveur HTTP actif  →  http://localhost:{PORT}  ·  effets audio : microphone (ambiant)')
     info('Astuce : curl http://localhost:%s/api/health' % PORT)
     info(
         'Debug durée des gros fichiers (logs par transfert) : '
@@ -206,12 +184,10 @@ def main() -> None:
         while not pulse_stop.wait(pulse_sec):
             pulse_count += 1
             up = int(time.monotonic() - pulse_t0)
-            mode = get_audio_input_mode()
-            mode_court = 'micro' if mode == 'micro' else 'playlist'
             m, s = divmod(up, 60)
             duree = f'{m}m{s}s' if m else f'{s}s'
             # Ligne courte ; rappel média seulement 1× sur 8 (évite répétition)
-            msg = f'OK | {duree} | {mode_court} | :{PORT}'
+            msg = f'OK | {duree} | micro | :{PORT}'
             if pulse_count % 8 == 0:
                 msg += ' | lents? SSI_HTTP_MEDIA_LOG=1'
             pulse(msg)

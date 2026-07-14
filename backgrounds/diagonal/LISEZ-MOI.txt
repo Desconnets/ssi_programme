@@ -1,6 +1,0 @@
-Dossier backgrounds — thème Diagonal Cinéma
-============================================
-Placez ici les vidéos de fond en boucle pour le thème Diagonal Cinéma.
-Extensions acceptées : .mp4  .webm  .mov  .m4v
-
-Repli sur backgrounds/ (racine) si vide.
