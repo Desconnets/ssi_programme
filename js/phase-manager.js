@@ -26,6 +26,29 @@ export let currentPhase = DEFAULT_PHASE;
 let currentPhaseTimeout = null;
 let autoAdvanceEnabled = true;
 
+/* Super Boom / Logo : leur timer de fin vit ici (pas dans phases.js). En mode manuel
+   (autoAdvanceEnabled === false) on ne coupe pas la phase — on reboucle simplement
+   le même timeout au lieu d'appeler stopSuperBoom()/stopLogoPhase(). */
+function armSuperBoomTimeout(){
+    currentPhaseTimeout = setTimeout(() => {
+        if(!autoAdvanceEnabled){
+            armSuperBoomTimeout();
+            return;
+        }
+        stopSuperBoom();
+    }, SUPER_BOOM_DURATION_MS);
+}
+
+function armLogoTimeout(){
+    currentPhaseTimeout = setTimeout(() => {
+        if(!autoAdvanceEnabled){
+            armLogoTimeout();
+            return;
+        }
+        stopLogoPhase();
+    }, LOGO_PHASE_DURATION_MS);
+}
+
 export function startPhase(phase, params){
     if(currentPhaseTimeout){
         clearTimeout(currentPhaseTimeout);
@@ -40,14 +63,14 @@ export function startPhase(phase, params){
                 break;
             case PHASE.SUPER_BOOM:
                 startSuperBoom();
-                currentPhaseTimeout = setTimeout(stopSuperBoom, SUPER_BOOM_DURATION_MS);
+                armSuperBoomTimeout();
                 break;
             case PHASE.VIDEO:
                 startOsWindowPhase(params);
                 break;
             case PHASE.LOGO:
                 startLogoPhase();
-                currentPhaseTimeout = setTimeout(stopLogoPhase, LOGO_PHASE_DURATION_MS);
+                armLogoTimeout();
                 break;
             case PHASE.WEBCAM:
                 startWebcamPhase();
@@ -61,7 +84,6 @@ export function startPhase(phase, params){
  */
 export function onPhaseEnded(){
     if(!autoAdvanceEnabled){
-        startPhase(currentPhase);
         return;
     }
     startPhase(pickNextPhase());
@@ -88,6 +110,11 @@ export function pickNextPhase() {
 
 export function setPhaseAutoAdvance(enabled) {
   autoAdvanceEnabled = Boolean(enabled);
+}
+
+/** Getter for the auto advance enabled flag */
+export function isAutoAdvanceEnabled() {
+  return autoAdvanceEnabled;
 }
 
 export function setPhaseSelectMode(mode) {

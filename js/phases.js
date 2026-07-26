@@ -56,7 +56,7 @@ import { attachVideoLoadListeners } from './video-load-log.js';
 import { attachVideoLifecycle } from './video-lifecycle.js';
 import { abortBrowserMediaWarm } from './browser-cache-warm.js';
 import { startWebcamGrainLoop, stopWebcamGrainLoop } from './webcam-grain.js';
-import { onPhaseEnded, startPhase, pickNextPhase } from './phase-manager.js';
+import { onPhaseEnded, startPhase, pickNextPhase, isAutoAdvanceEnabled } from './phase-manager.js';
 import { PHASE } from './phase-manager.js';
 
 const stickersLayer = document.getElementById('stickersLayer');
@@ -362,6 +362,12 @@ export function playNextSnakeSticker() {
   if (!snakeSet.length) return;
 
   if (snakeCyclesDone >= 3) {
+    if (!isAutoAdvanceEnabled()) {
+      /* Manual mode : we reset the snakeCyclesDone counter */
+      snakeCyclesDone = 0;
+      playNextSnakeSticker();
+      return;
+    }
     animateStickersOut(onPhaseEnded);
     return;
   }
@@ -979,12 +985,20 @@ export function startWebcamPhase() {
         .then(() => {
           if (gen !== webcamGeneration) return;
           reportLiveEvent('webcam_phase', {});
-          webcamPhaseTimer = setTimeout(() => {
-            if (gen !== webcamGeneration) return;
-            hideWebcamLayerAnimated(() => {
-              onPhaseEnded();
-            });
-          }, WEBCAM_PHASE_DURATION_MS);
+          const armWebcamPhaseTimer = () => {
+            webcamPhaseTimer = setTimeout(() => {
+              if (gen !== webcamGeneration) return;
+              if (!isAutoAdvanceEnabled()) {
+                /* If manual mode, we restart the timer */
+                armWebcamPhaseTimer();
+                return;
+              }
+              hideWebcamLayerAnimated(() => {
+                onPhaseEnded();
+              });
+            }, WEBCAM_PHASE_DURATION_MS);
+          };
+          armWebcamPhaseTimer();
         })
         .catch(() => {
           if (gen !== webcamGeneration) return;
@@ -1098,6 +1112,19 @@ export function startOsWindowPhase(opts = {}) {
       });
     };
 
+    const armOsWindowMaxTimer = () => {
+      osWindowMaxTimer = setTimeout(() => {
+        if (gen !== osWindowLoadGeneration) return;
+        if (!isAutoAdvanceEnabled()) {
+          /* If manual mode, we restart the timer */
+          armOsWindowMaxTimer();
+          return;
+        }
+        debugLog('[SSI] Phase fenêtre OS : durée max (garde-fou) → logo');
+        completePhase('timeout_max');
+      }, OS_WINDOW_PHASE_MAX_MS);
+    };
+
     const failAttempt = (why) => {
       if (gen !== osWindowLoadGeneration) return;
       if (phaseFinishing) return;
@@ -1169,8 +1196,11 @@ export function startOsWindowPhase(opts = {}) {
 
       osWindowVideo.onended = () => {
         const elapsed = phaseStartMs > 0 ? Date.now() - phaseStartMs : Infinity;
-        if (_osWindowMinLoopMs > 0 && elapsed < _osWindowMinLoopMs) {
-          /* Reboucle : pas encore assez de temps — maxTimer continue comme garde-fou absolu */
+        const shouldLoop = (_osWindowMinLoopMs > 0 && elapsed < _osWindowMinLoopMs) || !isAutoAdvanceEnabled();
+        if (shouldLoop) {
+          /* Reboucle : pas encore assez de temps (thème Diagonal), ou mode manuel —
+             on ne coupe jamais la vidéo. maxTimer continue comme garde-fou absolu (et
+             respecte lui aussi le mode manuel). */
           osWindowVideo.currentTime = 0;
           osWindowVideo.play().catch(() => {
             clearOsWindowMaxTimer();
@@ -1229,11 +1259,7 @@ export function startOsWindowPhase(opts = {}) {
             }, OS_WINDOW_PLAYING_WATCHDOG_MS);
           }
 
-          osWindowMaxTimer = setTimeout(() => {
-            if (gen !== osWindowLoadGeneration) return;
-            debugLog('[SSI] Phase fenêtre OS : durée max (garde-fou) → logo');
-            completePhase('timeout_max');
-          }, OS_WINDOW_PHASE_MAX_MS);
+          armOsWindowMaxTimer();
         },
         (err) => {
           if (gen !== osWindowLoadGeneration) return;
