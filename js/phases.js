@@ -58,6 +58,7 @@ import { abortBrowserMediaWarm } from './browser-cache-warm.js';
 import { startWebcamGrainLoop, stopWebcamGrainLoop } from './webcam-grain.js';
 import { onPhaseEnded, startPhase, pickNextPhase, isAutoAdvanceEnabled } from './phase-manager.js';
 import { PHASE } from './phase-manager.js';
+import { closeTextPhase, startTextPhase } from './text-phase.js'; 
 
 const stickersLayer = document.getElementById('stickersLayer');
 const sceneEl = document.getElementById('scene');
@@ -861,6 +862,9 @@ export function interruptAllPhases(done) {
   }
   clearWebcamTimers();
   clearOsWindowTimers();
+
+  closeTextPhase();
+
   inSuperBoom = false;
 
   osWindowLoadGeneration += 1;

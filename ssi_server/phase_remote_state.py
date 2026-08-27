@@ -30,6 +30,7 @@ _phase: str | None = None
 _video_index: int | None = None
 # Incrémenté seulement si le POST contient « phase » — pour que la page ne relance pas la phase à chaque POST fond.
 _phase_command_seq = 0
+_text_content: str | None = None
 
 # Fond scène (dégradé + vidéos backgrounds/)
 _bg_gradient_opacity: float | None = None
@@ -57,7 +58,7 @@ _phases_paused: bool = False
 # Son des vidéos phase_videos/ — muet par défaut, activable depuis la télécommande
 _video_muted: bool = True
 
-VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam'})
+VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam', 'text'})
 
 # Phases proposées par la sélection automatique (séquentielle ou aléatoire).
 # Désactiver une phase ne l'empêche pas d'être déclenchée manuellement.
@@ -72,6 +73,7 @@ PANEL_PHASE_ORDER: tuple[str, ...] = (
     'super_boom',
     'os_video',
     'logo',
+    'text',
     'webcam',
 )
 
@@ -81,6 +83,7 @@ PANEL_PHASE_LABELS: dict[str, str] = {
     'os_video': 'Fenêtre vidéo',
     'logo': 'Logo',
     'webcam': 'Webcam',
+    'text': 'Texte',
 }
 
 # Indice vidéo obligatoire pour cette phase (extensible si d’autres phases en ont besoin).
@@ -190,6 +193,7 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'phaseAutoAdvance': _phases_auto_advance,
         'enabledPhases': [p for p in PANEL_PHASE_ORDER if p in _enabled_phases],
         'phaseSelectMode': _phase_select_mode,
+        'textContent': _text_content,
     }
 
 
@@ -216,6 +220,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
     global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set, _phases_auto_advance
     global _enabled_phases, _phase_select_mode
+    global _text_content
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -233,14 +238,16 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_content_set = 'contentSet' in data
     has_enabled_phases = 'enabledPhases' in data
     has_select_mode = 'phaseSelectMode' in data
+    has_text = 'textContent' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
             and not has_idle_resume and not has_theme and not has_pause \
             and not has_auto_advance and not has_enabled_phases and not has_select_mode \
+            and not has_text \
             and not has_video_muted and not has_content_set:
         raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, enabledPhases, phaseSelectMode'
-            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet'
+            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet, textContent'
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
@@ -335,6 +342,10 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
         if has_video_muted:
             _video_muted = bool(data.get('videoMuted'))
 
+        if has_text:
+            tc = data.get('textContent')
+            _text_content = str(tc) if tc is not None else ''
+
         if has_content_set:
             cs = str(data.get('contentSet') or '')
             if cs != _content_set:
@@ -348,9 +359,11 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
         return _snapshot_unlocked().copy()
 
 
-def post_command(phase: str, video_index: int | None = None) -> dict[str, Any]:
-    """Compatibilité interne : équivalent à POST { phase, videoIndex? }."""
+def post_command(phase: str, video_index: int | None = None, text_content: str | None = None) -> dict[str, Any]:
+    """Compatibilité interne : équivalent à POST { phase, videoIndex?, textContent? }."""
     payload: dict[str, Any] = {'phase': phase}
     if video_index is not None:
         payload['videoIndex'] = video_index
+    if text_content is not None:
+            payload['textContent'] = text_content
     return post_remote_payload(payload)

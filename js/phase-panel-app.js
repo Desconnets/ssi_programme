@@ -1,3 +1,6 @@
+import { setTextContent } from "./phase-manager.js";
+import { updateTextContent } from "./text-phase.js";
+
 /**
  * Panneau web télécommande (`/phase_panel.html`) — module autonome, extensible.
  *
@@ -9,6 +12,16 @@
  */
 const API = '/api/phase-remote';
 
+// Initialize Wysi
+let wysiContent = "";
+Wysi({
+  darkMode: false,
+  el: "#text-editor",
+  onChange: (content) => {
+    wysiContent = content;
+  },
+});
+
 /** Si le serveur est plus vieux que le panneau. */
 const FALLBACK_PANEL_PHASES = [
   { id: 'snake', label: 'Snake', needsVideoIndex: false, hint: '' },
@@ -16,6 +29,7 @@ const FALLBACK_PANEL_PHASES = [
   { id: 'os_video', label: 'Fenêtre vidéo', needsVideoIndex: true, hint: '' },
   { id: 'logo', label: 'Logo', needsVideoIndex: false, hint: '' },
   { id: 'webcam', label: 'Webcam', needsVideoIndex: false, hint: '' },
+  { id: "text", label: "Texte", needsVideoIndex: false, hint: "" },
 ];
 
 function timeShort() {
@@ -83,10 +97,13 @@ async function postRemote(body) {
  * @param {string} phase
  * @param {number | null | undefined} videoIndex
  */
-async function postPhase(phase, videoIndex) {
+async function postPhase(phase, videoIndex, textContent) {
   const body = { phase };
   if (videoIndex != null && Number.isFinite(videoIndex)) {
     body.videoIndex = videoIndex;
+  }
+  if (textContent != null) {
+    body.textContent = textContent;
   }
   return postRemote(body);
 }
@@ -253,9 +270,10 @@ async function bootstrap() {
 
   const runPhase = async (p) => {
     const vi = p.needsVideoIndex ? getSelectedVideoIndex(videoSelect) : null;
+    const textContent = wysiContent;
     log.append('cmd', `${p.label} (${p.id})`, vi != null ? `vidéo #${vi}` : '');
     try {
-      const res = await postPhase(p.id, vi);
+      const res = await postPhase(p.id, vi, textContent);
       if (res.ok && res.json) {
         log.append('ok', `serveur seq=${res.json.seq}`, String(res.json.phase || ''));
         statusLine.textContent = `seq=${res.json.seq} · phase=${res.json.phase ?? '?'}`;

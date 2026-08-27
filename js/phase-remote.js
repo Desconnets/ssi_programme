@@ -89,7 +89,7 @@ export function startPhaseRemotePolling() {
           lastAppliedPhaseCommandSeq = pcs;
           const ph = data.phase;
           if (ph) {
-            startPhase(ph, { videoIndex: data.videoIndex });
+            startPhase(ph, { videoIndex: data.videoIndex, textContent: data.textContent });
           }
         }
       }
