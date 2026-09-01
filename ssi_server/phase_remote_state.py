@@ -360,7 +360,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
 
 
 def post_command(phase: str, video_index: int | None = None, text_content: str | None = None) -> dict[str, Any]:
-    """Compatibilité interne : équivalent à POST { phase, videoIndex?, textContent? }."""
+    """Internal compatibility helper: equivalent to POST { phase, videoIndex?, textContent? }."""
     payload: dict[str, Any] = {'phase': phase}
     if video_index is not None:
         payload['videoIndex'] = video_index

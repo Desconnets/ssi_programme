@@ -12,7 +12,7 @@ const API = '/api/phase-remote';
 let textEditorContent = "";
 let liveUpdateEnabled = false;
 let liveUpdateTimer = null;
-/** Défini par bootstrap() : envoie textEditorContent au serveur (debounce en mode direct). */
+/** Set by bootstrap(): sends textEditorContent to the server (debounced in live mode). */
 let scheduleLiveTextUpdate = null;
 const LIVE_UPDATE_DEBOUNCE_MS = 400;
 

@@ -49,7 +49,7 @@ export const PHASE_REMOTE_POLL_MS_HIDDEN = 2200;
  */
 export const PHASE_REMOTE_IDLE_RESUME_MS = 60000;
 
-/** Phase Text - durée */
+/** Text phase duration */
 export const TEXT_PHASE_DURATION_MS = 9999000;
 
 /**

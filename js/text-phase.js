@@ -14,10 +14,37 @@ function getElements() {
   return { layer: layerEl, content: contentEl };
 }
 
+const FIT_TEXT_MIN_PX = 16;
+
+/**
+ * The CSS sets a max size (vmin-based clamp, see style.css) to fill a good
+ * chunk of the screen. A message too long for that size is then shrunk here
+ * until it fits inside the scene (which has overflow:hidden — otherwise a
+ * long text would get clipped top/bottom).
+ */
+function fitTextToLayer(content, layer) {
+  if (!content || !layer) return;
+  content.style.fontSize = '';
+  const cs = getComputedStyle(layer);
+  const availW = layer.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight);
+  const availH = layer.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+  let fontSizePx = parseFloat(getComputedStyle(content).fontSize);
+  let guard = 30;
+  while (
+    guard-- > 0 &&
+    fontSizePx > FIT_TEXT_MIN_PX &&
+    (content.scrollWidth > availW || content.scrollHeight > availH)
+  ) {
+    fontSizePx = Math.max(FIT_TEXT_MIN_PX, fontSizePx - Math.max(1, fontSizePx * 0.04));
+    content.style.fontSize = `${fontSizePx}px`;
+  }
+}
+
 export function updateTextContent(newContent){
-  const { content } = getElements();
+  const { layer, content } = getElements();
   if (!content) return;
   content.innerHTML = newContent ?? '';
+  fitTextToLayer(content, layer);
 }
 
 export function isTextPhaseActive() {
@@ -49,12 +76,21 @@ export function applyTextPulse(levels, t) {
 export function startTextPhase(text, durationMs, callback) {
   const { layer, content } = getElements();
   content.innerHTML = text ?? '';
+  fitTextToLayer(content, layer);
   layer.classList.add('ssi-text-phase-layer--open');
   const dur = durationMs ?? TEXT_PHASE_DURATION_MS;
   textPhaseTimer = setTimeout(() => {
     closeTextPhase(callback); // or wherever in cycle
     onPhaseEnded();
   }, dur);
+}
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', () => {
+    if (!isTextPhaseActive()) return;
+    const { layer, content } = getElements();
+    fitTextToLayer(content, layer);
+  });
 }
 
 export function closeTextPhase(callback) {

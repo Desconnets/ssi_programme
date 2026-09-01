@@ -63,7 +63,7 @@ export function startPhaseRemotePolling() {
   let lastAppliedSelectMode = null;
   /** État mute vidéo appliqué sur la page scène. */
   let lastAppliedVideoMuted = null;
-  /** Dernier texte appliqué au DOM (indépendant du redémarrage de phase). */
+  /** Last text applied to the DOM (independent of phase restarts). */
   let lastAppliedTextContent = null;
   /** @type {AbortController | null} */
   let abortCtl = null;
@@ -96,7 +96,7 @@ export function startPhaseRemotePolling() {
           }
         }
 
-        /* Mise à jour du texte affiché sans relancer la phase (ex. édition en direct). */
+        /* Update the displayed text without restarting the phase (e.g. live editing). */
         const newTextContent = typeof data.textContent === 'string' ? data.textContent : '';
         if (newTextContent !== lastAppliedTextContent) {
           lastAppliedTextContent = newTextContent;
