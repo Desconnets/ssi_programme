@@ -15,10 +15,9 @@ function getElements() {
 }
 
 export function updateTextContent(newContent){
-    console.log(newContent);
-    console.log(layer, content, newContent);
-  
-    content.innerHTML = newContent ?? '';
+  const { content } = getElements();
+  if (!content) return;
+  content.innerHTML = newContent ?? '';
 }
 
 export function isTextPhaseActive() {

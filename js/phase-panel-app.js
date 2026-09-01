@@ -1,6 +1,3 @@
-import { setTextContent } from "./phase-manager.js";
-import { updateTextContent } from "./text-phase.js";
-
 /**
  * Panneau web télécommande (`/phase_panel.html`) — module autonome, extensible.
  *
@@ -12,15 +9,12 @@ import { updateTextContent } from "./text-phase.js";
  */
 const API = '/api/phase-remote';
 
-// Initialize Wysi
-let wysiContent = "";
-Wysi({
-  darkMode: false,
-  el: "#text-editor",
-  onChange: (content) => {
-    wysiContent = content;
-  },
-});
+let textEditorContent = "";
+let liveUpdateEnabled = false;
+let liveUpdateTimer = null;
+/** Défini par bootstrap() : envoie textEditorContent au serveur (debounce en mode direct). */
+let scheduleLiveTextUpdate = null;
+const LIVE_UPDATE_DEBOUNCE_MS = 400;
 
 /** Si le serveur est plus vieux que le panneau. */
 const FALLBACK_PANEL_PHASES = [
@@ -228,6 +222,9 @@ async function bootstrap() {
   const btnAutoAdvanceManual = document.getElementById('btnAutoAdvanceManual');
   const btnPhaseSelectModeSeq = document.getElementById('btnPhaseSelectModeSeq');
   const btnPhaseSelectModeRandom = document.getElementById('btnPhaseSelectModeRandom');
+  const textEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById('text-editor'));
+  const btnUpdateTextContent = document.getElementById('btnUpdateTextContent');
+  const textLiveUpdateCheck = /** @type {HTMLInputElement} */ (document.getElementById('panelTextLiveUpdate'));
 
   if (
     !logEl ||
@@ -254,7 +251,10 @@ async function bootstrap() {
     !panelContentSets ||
     !btnContentSetNone ||
     !btnPhaseSelectModeSeq ||
-    !btnPhaseSelectModeRandom
+    !btnPhaseSelectModeRandom ||
+    !textEditor ||
+    !btnUpdateTextContent ||
+    !textLiveUpdateCheck
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -270,7 +270,7 @@ async function bootstrap() {
 
   const runPhase = async (p) => {
     const vi = p.needsVideoIndex ? getSelectedVideoIndex(videoSelect) : null;
-    const textContent = wysiContent;
+    const textContent = textEditorContent;
     log.append('cmd', `${p.label} (${p.id})`, vi != null ? `vidéo #${vi}` : '');
     try {
       const res = await postPhase(p.id, vi, textContent);
@@ -482,6 +482,39 @@ async function bootstrap() {
       statusLine.textContent = m;
     }
   };
+
+  const sendTextContentUpdate = async () => {
+    log.append('cmd', 'Mise à jour texte', textEditorContent.slice(0, 60));
+    try {
+      const res = await postRemote({ textContent: textEditorContent });
+      logRemoteResult('POST texte', res);
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST texte', m);
+      statusLine.textContent = m;
+    }
+  };
+
+  scheduleLiveTextUpdate = () => {
+    clearTimeout(liveUpdateTimer);
+    liveUpdateTimer = setTimeout(sendTextContentUpdate, LIVE_UPDATE_DEBOUNCE_MS);
+  };
+
+  textEditor.addEventListener('input', () => {
+    textEditorContent = textEditor.value;
+    if (liveUpdateEnabled) scheduleLiveTextUpdate();
+  });
+
+  btnUpdateTextContent.addEventListener('click', () => {
+    clearTimeout(liveUpdateTimer);
+    void sendTextContentUpdate();
+  });
+
+  textLiveUpdateCheck.addEventListener('change', () => {
+    liveUpdateEnabled = textLiveUpdateCheck.checked;
+    log.append('info', liveUpdateEnabled ? 'Mise à jour en direct activée' : 'Mise à jour en direct désactivée');
+    if (liveUpdateEnabled) scheduleLiveTextUpdate();
+  });
 
   videoMutedCheck.addEventListener('change', async () => {
     const muted = videoMutedCheck.checked;

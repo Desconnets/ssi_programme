@@ -360,11 +360,10 @@
         <h2 id="lbl-actions">Actions</h2>
         <div id="panelActions"></div>
          <div class="panel-field" style="margin-top: 0.5rem">
-            <label for="panelTextInput">Message (phase Texte)</label>
-            <!--
-            <input
-              type="text"
-              id="panelTextInput"
+            <label for="text-editor">Message (phase Texte)</label>
+            <textarea
+              id="text-editor"
+              rows="4"
               placeholder="Entrez un message…"
               style="
                 width: 100%;
@@ -372,11 +371,17 @@
                 font-size: 0.9rem;
                 border-radius: 6px;
                 border: 1px solid #888;
+                font-family: inherit;
+                resize: vertical;
               "
-            />
-            -->
-            
-            <textarea id="text-editor"></textarea>
+            ></textarea>
+            <label class="panel-check" style="margin-top: 0.5rem">
+              <input type="checkbox" id="panelTextLiveUpdate" />
+              Mise à jour en direct (à chaque frappe)
+            </label>
+            <button type="button" class="secondary" id="btnUpdateTextContent" style="margin-top: 0.5rem; width: 100%">
+              Mettre à jour le texte affiché
+            </button>
           </div>
       </section>
 
@@ -455,8 +460,6 @@
     </p>
   </div>
 
-    <link rel="stylesheet" href="libs/wysi/wysi.min.css" />
-    <script src="libs/wysi/wysi.min.js"></script>
 
   <script type="module" src="js/phase-panel-app.js"></script>
 </body>

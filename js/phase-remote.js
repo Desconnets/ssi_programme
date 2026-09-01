@@ -21,6 +21,7 @@ import {
 } from './phases.js';
 import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
+import { updateTextContent } from './text-phase.js';
 
 const ENDPOINT = '/api/phase-remote';
 
@@ -62,6 +63,8 @@ export function startPhaseRemotePolling() {
   let lastAppliedSelectMode = null;
   /** État mute vidéo appliqué sur la page scène. */
   let lastAppliedVideoMuted = null;
+  /** Dernier texte appliqué au DOM (indépendant du redémarrage de phase). */
+  let lastAppliedTextContent = null;
   /** @type {AbortController | null} */
   let abortCtl = null;
   let timeoutId = 0;
@@ -91,6 +94,13 @@ export function startPhaseRemotePolling() {
           if (ph) {
             startPhase(ph, { videoIndex: data.videoIndex, textContent: data.textContent });
           }
+        }
+
+        /* Mise à jour du texte affiché sans relancer la phase (ex. édition en direct). */
+        const newTextContent = typeof data.textContent === 'string' ? data.textContent : '';
+        if (newTextContent !== lastAppliedTextContent) {
+          lastAppliedTextContent = newTextContent;
+          updateTextContent(newTextContent);
         }
       }
 
