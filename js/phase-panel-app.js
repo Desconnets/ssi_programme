@@ -9,6 +9,13 @@
  */
 const API = '/api/phase-remote';
 
+let textEditorContent = "";
+let liveUpdateEnabled = false;
+let liveUpdateTimer = null;
+/** Set by bootstrap(): sends textEditorContent to the server (debounced in live mode). */
+let scheduleLiveTextUpdate = null;
+const LIVE_UPDATE_DEBOUNCE_MS = 400;
+
 /** Si le serveur est plus vieux que le panneau. */
 const FALLBACK_PANEL_PHASES = [
   { id: 'snake', label: 'Snake', needsVideoIndex: false, hint: '' },
@@ -16,6 +23,7 @@ const FALLBACK_PANEL_PHASES = [
   { id: 'os_video', label: 'Fenêtre vidéo', needsVideoIndex: true, hint: '' },
   { id: 'logo', label: 'Logo', needsVideoIndex: false, hint: '' },
   { id: 'webcam', label: 'Webcam', needsVideoIndex: false, hint: '' },
+  { id: "text", label: "Texte", needsVideoIndex: false, hint: "" },
 ];
 
 function timeShort() {
@@ -83,10 +91,13 @@ async function postRemote(body) {
  * @param {string} phase
  * @param {number | null | undefined} videoIndex
  */
-async function postPhase(phase, videoIndex) {
+async function postPhase(phase, videoIndex, textContent) {
   const body = { phase };
   if (videoIndex != null && Number.isFinite(videoIndex)) {
     body.videoIndex = videoIndex;
+  }
+  if (textContent != null) {
+    body.textContent = textContent;
   }
   return postRemote(body);
 }
@@ -211,6 +222,9 @@ async function bootstrap() {
   const btnAutoAdvanceManual = document.getElementById('btnAutoAdvanceManual');
   const btnPhaseSelectModeSeq = document.getElementById('btnPhaseSelectModeSeq');
   const btnPhaseSelectModeRandom = document.getElementById('btnPhaseSelectModeRandom');
+  const textEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById('text-editor'));
+  const btnUpdateTextContent = document.getElementById('btnUpdateTextContent');
+  const textLiveUpdateCheck = /** @type {HTMLInputElement} */ (document.getElementById('panelTextLiveUpdate'));
 
   if (
     !logEl ||
@@ -237,7 +251,10 @@ async function bootstrap() {
     !panelContentSets ||
     !btnContentSetNone ||
     !btnPhaseSelectModeSeq ||
-    !btnPhaseSelectModeRandom
+    !btnPhaseSelectModeRandom ||
+    !textEditor ||
+    !btnUpdateTextContent ||
+    !textLiveUpdateCheck
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -253,9 +270,10 @@ async function bootstrap() {
 
   const runPhase = async (p) => {
     const vi = p.needsVideoIndex ? getSelectedVideoIndex(videoSelect) : null;
+    const textContent = textEditorContent;
     log.append('cmd', `${p.label} (${p.id})`, vi != null ? `vidéo #${vi}` : '');
     try {
-      const res = await postPhase(p.id, vi);
+      const res = await postPhase(p.id, vi, textContent);
       if (res.ok && res.json) {
         log.append('ok', `serveur seq=${res.json.seq}`, String(res.json.phase || ''));
         statusLine.textContent = `seq=${res.json.seq} · phase=${res.json.phase ?? '?'}`;
@@ -464,6 +482,39 @@ async function bootstrap() {
       statusLine.textContent = m;
     }
   };
+
+  const sendTextContentUpdate = async () => {
+    log.append('cmd', 'Mise à jour texte', textEditorContent.slice(0, 60));
+    try {
+      const res = await postRemote({ textContent: textEditorContent });
+      logRemoteResult('POST texte', res);
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST texte', m);
+      statusLine.textContent = m;
+    }
+  };
+
+  scheduleLiveTextUpdate = () => {
+    clearTimeout(liveUpdateTimer);
+    liveUpdateTimer = setTimeout(sendTextContentUpdate, LIVE_UPDATE_DEBOUNCE_MS);
+  };
+
+  textEditor.addEventListener('input', () => {
+    textEditorContent = textEditor.value;
+    if (liveUpdateEnabled) scheduleLiveTextUpdate();
+  });
+
+  btnUpdateTextContent.addEventListener('click', () => {
+    clearTimeout(liveUpdateTimer);
+    void sendTextContentUpdate();
+  });
+
+  textLiveUpdateCheck.addEventListener('change', () => {
+    liveUpdateEnabled = textLiveUpdateCheck.checked;
+    log.append('info', liveUpdateEnabled ? 'Mise à jour en direct activée' : 'Mise à jour en direct désactivée');
+    if (liveUpdateEnabled) scheduleLiveTextUpdate();
+  });
 
   videoMutedCheck.addEventListener('change', async () => {
     const muted = videoMutedCheck.checked;

@@ -1,5 +1,6 @@
-import { LOGO_PHASE_DURATION_MS, SUPER_BOOM_DURATION_MS } from "./config.js";
+import { LOGO_PHASE_DURATION_MS, SUPER_BOOM_DURATION_MS, TEXT_PHASE_DURATION_MS } from "./config.js";
 import { prepareSnakeSet, playNextSnakeSticker, startSuperBoom, startOsWindowPhase, interruptAllPhases, startLogoPhase, startWebcamPhase, stopSuperBoom, stopLogoPhase } from "./phases.js";
+import { closeTextPhase, startTextPhase, textContent } from './text-phase.js'; 
 
 export const PHASE = Object.freeze({
   SNAKE:        'snake',
@@ -7,6 +8,7 @@ export const PHASE = Object.freeze({
   VIDEO:        'os_video',
   LOGO:         'logo',
   WEBCAM:       'webcam',
+  TEXT:         'text',
 });
 
 export const PHASE_ORDER = [
@@ -14,7 +16,8 @@ export const PHASE_ORDER = [
     PHASE.SUPER_BOOM,
     PHASE.VIDEO,
     PHASE.LOGO,
-    PHASE.WEBCAM
+    PHASE.WEBCAM,
+    PHASE.TEXT
 ];
 
 let phaseSelectMode = 'sequential'; // 'sequential' | 'random'
@@ -74,6 +77,9 @@ export function startPhase(phase, params){
                 break;
             case PHASE.WEBCAM:
                 startWebcamPhase();
+                break;
+            case PHASE.TEXT:
+                startTextPhase(params.textContent ?? '', TEXT_PHASE_DURATION_MS);
                 break;
         }
     });

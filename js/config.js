@@ -49,6 +49,9 @@ export const PHASE_REMOTE_POLL_MS_HIDDEN = 2200;
  */
 export const PHASE_REMOTE_IDLE_RESUME_MS = 60000;
 
+/** Text phase duration */
+export const TEXT_PHASE_DURATION_MS = 20000;
+
 /**
  * Au chargement de la page : remplir le cache HTTP du navigateur (fetch + blob), **en file d’attente**
  * pour ne pas saturer disque/réseau tout en remplissant le cache (serveur HTTP threadé).
