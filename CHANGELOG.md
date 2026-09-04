@@ -1,5 +1,57 @@
 # Changelog
 
+> Journal des évolutions. Dernière mise à jour : **septembre 2026**.
+
+## [Septembre 2026] — Catégories d’abord + webcam (luminosité / REC)
+
+### Architecture médias (inversion)
+
+Les catégories ne sont plus des sous-dossiers de `stickers/` / `videos/` / `backgrounds/`.  
+Chaque **mood** contient des **dossiers de catégorie** ; chaque catégorie contient les trois types de médias.
+
+```
+content/
+  logos/classique/    logos/dark/
+  classique/
+    boom/          stickers/  videos/  backgrounds/
+    jeux-video/    stickers/  videos/  backgrounds/
+    pop-culture/   stickers/  videos/  backgrounds/
+    doux/          stickers/  videos/  backgrounds/
+    urban/         stickers/  videos/  backgrounds/
+  dark/
+    boom/  jeux-video/  pop-culture/  doux/  urban/
+      (même structure, fichiers _techno)
+```
+
+- Bouton télécommande = **nom du dossier** (`boom`, `jeux-video`, …).
+- Clic catégorie → uniquement `content/{mood}/{catégorie}/{type}/` (plus de mélange si le dossier est vide).
+- **Racine** → toutes les catégories du mood.
+- Nouveau dossier `content/classique/ma-categorie/` avec `stickers/`, `videos/`, `backgrounds/` → bouton automatique, **aucun JS à modifier**.
+
+### Webcam
+
+- Slider **luminosité** 20–300 % (`webcamBrightness`, filtre CSS `brightness()`).
+- Overlay **REC caméscope** : point rouge clignotant + label REC + timecode `HH:MM:SS` (`webcamRecOverlay`).
+
+### Fichiers touchés
+
+| Fichier | Rôle dans cette mise à jour |
+|---------|-----------------------------|
+| `ssi_server/fsutil.py` | Scan `content/{mood}/{cat}/` ; `list_content_files` / `get_available_content_sets` |
+| `ssi_server/phase_video_convert.py` | Conversion `content/{mood}/{cat}/videos|backgrounds/` |
+| `ssi_server/live_report.py` | Inventaire au démarrage sur la nouvelle arborescence |
+| `ssi_server/phase_remote_state.py` | `contentSet` + `webcamBrightness` + `webcamRecOverlay` |
+| `ssi_server/handler.py` | GET listes médias via `list_content_files` ; `availableContentSets` |
+| `js/phases.js` | `setWebcamBrightness`, overlay REC + timecode |
+| `js/phase-remote.js` | Applique mood, catégorie, mute, luminosité, REC au poll |
+| `js/phase-panel-app.js` | Boutons catégories dynamiques + slider webcam + case REC |
+| `phase_panel.html` | Sections Mood, Contenu, Webcam |
+| `index.html` | Overlay `.ssi-webcam-rec-overlay` |
+| `style.css` | Styles REC (point, label, timecode) |
+| `README.md` · `docs/architecture.md` · `docs/file-index.md` · `docs/remote-panel.md` · `ROADMAP.md` | Doc alignée |
+
+---
+
 ## [Juin 2026 — v2] — Système de contenu par mood et catégories
 
 ### Architecture `content/`
@@ -67,7 +119,7 @@ content/
 
 ---
 
-> **Dernière mise à jour : avril 2026** — voir aussi `ROADMAP.md` pour les étapes techniques et `README.md` pour l'usage.
+> Dernière mise à jour : **septembre 2026**. Pour l’usage : `README.md`. Pour les étapes : `ROADMAP.md`.
 
 ---
 

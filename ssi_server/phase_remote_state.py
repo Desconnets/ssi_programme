@@ -12,7 +12,7 @@ Pour étendre (nouvelle phase, nouveau réglage) :
 
 Phases reconnues : VALID_PHASES + PANEL_PHASE_ORDER + PANEL_PHASE_LABELS.
 Moods reconnus   : VALID_MOODS (classique / dark).
-Content sets     : n'importe quel sous-dossier détecté dans stickers/, phase_videos/, backgrounds/.
+Content sets     : n'importe quel sous-dossier de content/{mood}/ (boom, jeux-video, …).
 
 Thread-safety : toutes les lectures/écritures des variables _privées passent par _lock.
 """
@@ -56,6 +56,14 @@ _phases_paused: bool = False
 
 # Son des vidéos phase_videos/ — muet par défaut, activable depuis la télécommande
 _video_muted: bool = True
+
+# Webcam : luminosité (filtre CSS brightness) — 1.0 = normale
+_webcam_brightness: float = 1.0
+_WEBCAM_BRIGHTNESS_MIN = 0.2
+_WEBCAM_BRIGHTNESS_MAX = 3.0
+
+# Webcam : overlay « REC caméscope » — activé par défaut
+_webcam_rec_overlay: bool = True
 
 VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam'})
 
@@ -127,7 +135,7 @@ def _phase_video_list_ttl_sec() -> float:
 def get_cached_phase_video_filenames() -> list[str]:
     """
     Chemins relatifs dans phase_videos/ selon le mood + content set actifs (TTL court, thread-safe).
-    Priorité : phase_videos/{content_set}/ → phase_videos/{mood}/ → phase_videos/
+    Priorité : content/{mood}/{catégorie}/videos/ → pool mood → phase_videos/
     """
     from .config import VIDEO_EXT
     from .fsutil import list_content_files
@@ -151,7 +159,7 @@ def get_cached_phase_video_filenames() -> list[str]:
 def get_cached_background_filenames() -> list[str]:
     """
     Chemins relatifs dans backgrounds/ selon le mood + content set actifs (TTL court, thread-safe).
-    Priorité : backgrounds/{content_set}/ → backgrounds/{mood}/ → backgrounds/
+    Priorité : content/{mood}/{catégorie}/backgrounds/ → pool mood → backgrounds/
     """
     from .config import VIDEO_EXT
     from .fsutil import list_content_files
@@ -187,9 +195,14 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'contentSet': _content_set,
         'phasesPaused': _phases_paused,
         'videoMuted': _video_muted,
+<<<<<<< Updated upstream
         'phaseAutoAdvance': _phases_auto_advance,
         'enabledPhases': [p for p in PANEL_PHASE_ORDER if p in _enabled_phases],
         'phaseSelectMode': _phase_select_mode,
+=======
+        'webcamBrightness': _webcam_brightness,
+        'webcamRecOverlay': _webcam_rec_overlay,
+>>>>>>> Stashed changes
     }
 
 
@@ -214,8 +227,13 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     « phase » est optionnel si seuls des réglages fond sont envoyés.
     """
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
+<<<<<<< Updated upstream
     global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set, _phases_auto_advance
     global _enabled_phases, _phase_select_mode
+=======
+    global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set
+    global _webcam_brightness, _webcam_rec_overlay
+>>>>>>> Stashed changes
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -231,6 +249,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_auto_advance = 'phaseAutoAdvance' in data
     has_video_muted = 'videoMuted' in data
     has_content_set = 'contentSet' in data
+<<<<<<< Updated upstream
     has_enabled_phases = 'enabledPhases' in data
     has_select_mode = 'phaseSelectMode' in data
 
@@ -241,11 +260,29 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
         raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, enabledPhases, phaseSelectMode'
             'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet'
+=======
+    has_webcam_brightness = 'webcamBrightness' in data
+    has_webcam_rec_overlay = 'webcamRecOverlay' in data
+
+    if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
+            and not has_idle_resume and not has_theme and not has_pause \
+            and not has_video_muted and not has_content_set \
+            and not has_webcam_brightness and not has_webcam_rec_overlay:
+        raise ValueError(
+            'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, '
+            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, videoMuted, contentSet, '
+            'webcamBrightness, webcamRecOverlay'
+>>>>>>> Stashed changes
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
         and not has_bg_auto and not has_bg_index and not has_theme \
+<<<<<<< Updated upstream
         and not has_pause and not has_video_muted and not has_content_set and not has_auto_advance
+=======
+        and not has_pause and not has_video_muted and not has_content_set \
+        and not has_webcam_brightness and not has_webcam_rec_overlay
+>>>>>>> Stashed changes
 
     with _lock:
         if has_phase:
@@ -341,6 +378,16 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
                 _content_set = cs
                 _pv_list_cache = None
                 _bg_list_cache = None
+
+        if has_webcam_brightness:
+            try:
+                bv = float(data.get('webcamBrightness', 1.0))
+            except (TypeError, ValueError) as e:
+                raise ValueError('webcamBrightness doit être un nombre (ex. 1.0)') from e
+            _webcam_brightness = max(_WEBCAM_BRIGHTNESS_MIN, min(_WEBCAM_BRIGHTNESS_MAX, bv))
+
+        if has_webcam_rec_overlay:
+            _webcam_rec_overlay = bool(data.get('webcamRecOverlay'))
 
         if not idle_only:
             _seq += 1

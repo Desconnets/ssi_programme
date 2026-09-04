@@ -207,10 +207,18 @@ async function bootstrap() {
   const panelContentSets = document.getElementById('panelContentSets');
   const btnContentSetNone = document.getElementById('btnContentSetNone');
   const btnPausePhases = document.getElementById('btnPausePhases');
+<<<<<<< Updated upstream
   const btnAutoAdvanceAuto = document.getElementById('btnAutoAdvanceAuto');
   const btnAutoAdvanceManual = document.getElementById('btnAutoAdvanceManual');
   const btnPhaseSelectModeSeq = document.getElementById('btnPhaseSelectModeSeq');
   const btnPhaseSelectModeRandom = document.getElementById('btnPhaseSelectModeRandom');
+=======
+  const webcamBrightnessInput = /** @type {HTMLInputElement} */ (document.getElementById('panelWebcamBrightness'));
+  const webcamBrightnessVal = document.getElementById('panelWebcamBrightnessVal');
+  const btnWebcamBrightnessApply = document.getElementById('btnWebcamBrightnessApply');
+  const btnWebcamBrightnessReset = document.getElementById('btnWebcamBrightnessReset');
+  const webcamRecOverlayCheck = /** @type {HTMLInputElement} */ (document.getElementById('panelWebcamRecOverlay'));
+>>>>>>> Stashed changes
 
   if (
     !logEl ||
@@ -236,8 +244,16 @@ async function bootstrap() {
     !videoMutedCheck ||
     !panelContentSets ||
     !btnContentSetNone ||
+<<<<<<< Updated upstream
     !btnPhaseSelectModeSeq ||
     !btnPhaseSelectModeRandom
+=======
+    !webcamBrightnessInput ||
+    !webcamBrightnessVal ||
+    !btnWebcamBrightnessApply ||
+    !btnWebcamBrightnessReset ||
+    !webcamRecOverlayCheck
+>>>>>>> Stashed changes
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -250,6 +266,11 @@ async function bootstrap() {
   };
   bgOpacity.addEventListener('input', syncOpacityLabel);
   syncOpacityLabel();
+
+  const syncBrightnessLabel = () => {
+    webcamBrightnessVal.textContent = `${webcamBrightnessInput.value}%`;
+  };
+  webcamBrightnessInput.addEventListener('input', syncBrightnessLabel);
 
   const runPhase = async (p) => {
     const vi = p.needsVideoIndex ? getSelectedVideoIndex(videoSelect) : null;
@@ -311,6 +332,14 @@ async function bootstrap() {
 
       /* Sync case muet vidéo */
       videoMutedCheck.checked = j.videoMuted !== false;
+
+      /* Sync luminosité webcam */
+      const bv = typeof j.webcamBrightness === 'number' ? j.webcamBrightness : 1.0;
+      webcamBrightnessInput.value = String(Math.round(bv * 100));
+      webcamBrightnessVal.textContent = `${Math.round(bv * 100)}%`;
+
+      /* Sync overlay REC */
+      webcamRecOverlayCheck.checked = j.webcamRecOverlay !== false;
 
       /* Sync boutons mood */
       const activeTheme = typeof j.theme === 'string' ? j.theme : 'classique';
@@ -586,6 +615,49 @@ async function bootstrap() {
         backgroundAutoRotate: false,
       });
       logRemoteResult('POST fond', res);
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST', m);
+      statusLine.textContent = m;
+    }
+  });
+
+  btnWebcamBrightnessApply.addEventListener('click', async () => {
+    const pct = Math.max(20, Math.min(300, parseInt(webcamBrightnessInput.value, 10) || 100));
+    webcamBrightnessInput.value = String(pct);
+    syncBrightnessLabel();
+    const val = pct / 100;
+    log.append('cmd', 'Luminosité webcam', `${pct}%`);
+    try {
+      const res = await postRemote({ webcamBrightness: val });
+      logRemoteResult('POST luminosité webcam', res);
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST', m);
+      statusLine.textContent = m;
+    }
+  });
+
+  btnWebcamBrightnessReset.addEventListener('click', async () => {
+    webcamBrightnessInput.value = '100';
+    syncBrightnessLabel();
+    log.append('cmd', 'Luminosité webcam', 'réinitialisation (1.0)');
+    try {
+      const res = await postRemote({ webcamBrightness: 1.0 });
+      logRemoteResult('POST luminosité webcam', res);
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST', m);
+      statusLine.textContent = m;
+    }
+  });
+
+  webcamRecOverlayCheck.addEventListener('change', async () => {
+    const enabled = webcamRecOverlayCheck.checked;
+    log.append('cmd', enabled ? 'Overlay REC activé' : 'Overlay REC désactivé');
+    try {
+      const res = await postRemote({ webcamRecOverlay: enabled });
+      logRemoteResult('POST overlay REC', res);
     } catch (e) {
       const m = e && e.message ? e.message : String(e);
       log.append('err', 'POST', m);

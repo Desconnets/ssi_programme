@@ -18,6 +18,8 @@ import {
   setOsWindowMinLoopMs,
   setPhasePaused,
   setOsWindowVideoMuted,
+  setWebcamBrightness,
+  setWebcamRecOverlay,
 } from './phases.js';
 import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
@@ -62,6 +64,10 @@ export function startPhaseRemotePolling() {
   let lastAppliedSelectMode = null;
   /** État mute vidéo appliqué sur la page scène. */
   let lastAppliedVideoMuted = null;
+  /** Luminosité webcam appliquée. */
+  let lastAppliedWebcamBrightness = null;
+  /** Overlay REC appliqué. */
+  let lastAppliedWebcamRecOverlay = null;
   /** @type {AbortController | null} */
   let abortCtl = null;
   let timeoutId = 0;
@@ -99,6 +105,20 @@ export function startPhaseRemotePolling() {
       if (isVideoMuted !== lastAppliedVideoMuted) {
         lastAppliedVideoMuted = isVideoMuted;
         setOsWindowVideoMuted(isVideoMuted);
+      }
+
+      /* Luminosité webcam */
+      const brightness = typeof data.webcamBrightness === 'number' ? data.webcamBrightness : 1.0;
+      if (brightness !== lastAppliedWebcamBrightness) {
+        lastAppliedWebcamBrightness = brightness;
+        setWebcamBrightness(brightness);
+      }
+
+      /* Overlay REC caméscope */
+      const recOverlay = data.webcamRecOverlay !== false;
+      if (recOverlay !== lastAppliedWebcamRecOverlay) {
+        lastAppliedWebcamRecOverlay = recOverlay;
+        setWebcamRecOverlay(recOverlay);
       }
 
       /* Pause / reprise du cycle visuel */

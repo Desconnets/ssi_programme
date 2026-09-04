@@ -23,6 +23,10 @@ Ce document décrit les points d’extension pour ajouter **phases**, **boutons*
 
 Champs utiles pour le panneau / futurs clients :
 
+- `availableContentSets` — noms de dossiers de catégorie (boutons Contenu).
+- `contentSet` — catégorie active (`""` = Racine).
+- `theme` — `classique` \| `dark`.
+- `videoMuted`, `webcamBrightness`, `webcamRecOverlay`, `phasesPaused`.
 - `panelPhases` — boutons dynamiques (voir ci‑dessus).
 - `phaseVideoFiles` / `phaseVideoCount` — liste déroulante vidéos phase.
 - `backgroundVideoFiles` / `backgroundVideoCount` — vidéos `backgrounds/` (cache TTL).
@@ -58,21 +62,31 @@ Exemples de corps JSON :
 ```
 
 ```json
-{ "theme": "diagonal" }
+{ "theme": "dark" }
 ```
 
-Entrée unique : `phase_remote_state.post_remote_payload(data)` — au moins un champ parmi `phase`, `bgGradientOpacity`, `backgroundAutoRotate`, `backgroundVideoIndex`, `idleResumeMs`, **`theme`**. Le champ `phase` n’est plus obligatoire si seuls d’autres réglages sont envoyés.
+```json
+{ "contentSet": "jeux-video" }
+```
 
-`theme` (`"ssi"` | `"diagonal"`) : invalide les caches de listes médias, incrémente `seq` + `lastCommandMs`. Côté scène, `phase-remote.js` détecte le changement, applique `data-app-theme` sur `<html>` et recharge stickers / phase-videos / backgrounds depuis les sous-dossiers du thème.
+```json
+{ "webcamBrightness": 1.4, "webcamRecOverlay": true }
+```
+
+Entrée unique : `phase_remote_state.post_remote_payload(data)` — au moins un champ reconnu (`phase`, fond, `idleResumeMs`, `theme`, `contentSet`, `pausePhases`, `videoMuted`, `webcamBrightness`, `webcamRecOverlay`). Le champ `phase` n’est plus obligatoire si seuls d’autres réglages sont envoyés.
+
+`theme` (`"classique"` | `"dark"`) et `contentSet` invalident les caches de listes médias. Côté scène, `phase-remote.js` applique `data-app-theme` et recharge stickers / vidéos / fonds depuis `content/{mood}/{catégorie}/`.
 
 Pour d’autres extensions (ex. `preset`, `duration`) : étendre `post_remote_payload`, le handler, puis `js/phase-panel-app.js` et le module scène concerné (ex. `phases.js`).
 
 ## 4. Panneau web (`phase_panel.html` + `js/phase-panel-app.js`)
 
 - Les boutons de **phase** viennent de `panelPhases` (pas de liste en dur dans le HTML).
-- Section **Thème / Identité** : boutons **SSI** et **Diagonal Cinéma** — POST `{ "theme": "..." }` ; bascule couleurs + bibliothèques médias (sous-dossiers `stickers/{theme}/`, `phase_videos/{theme}/`, `backgrounds/{theme}/`).
-- Section **Fond scène** (opacité dégradé, liste `backgrounds/`, rotation auto) : champs statiques dans le HTML + `postRemote()`.
-- **Journal** : bloc `#panelLog` — ring buffer côté navigateur uniquement (pas de persistance). Pour un historique serveur, ajouter une route + stockage (fichier / mémoire) et un second panneau ou une section fetch.
+- **Mood** : Classique / Dark — POST `{ "theme": "classique"|"dark" }`.
+- **Contenu** : boutons générés depuis `availableContentSets` (noms de dossiers) + Racine.
+- **Webcam** : slider luminosité + case overlay REC.
+- Section **Fond scène** : opacité, liste fonds, rotation auto.
+- **Journal** : bloc `#panelLog`.
 - **Logs terminal** : POST → `[SSI·TC]` (`logutil.remote_cmd`). GET poll reste silencieux sauf `SSI_PHASE_REMOTE_LOG=1`.
 
 ## 5. Page scène (`js/phase-remote.js` + `js/background-playback.js`)

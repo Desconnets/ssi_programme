@@ -273,8 +273,8 @@ def _convert_theme_subdirs(directory: str) -> None:
 
 def _convert_content_dir(media_type: str) -> None:
     """
-    Convertit les vidéos brutes dans toute la hiérarchie content/{mood}/{media_type}/.
-    Parcourt tous les moods et tous les content sets.
+    Convertit les vidéos brutes dans content/{mood}/{catégorie}/{media_type}/.
+    Ignore logos/ et les dossiers commençant par _.
     Les fichiers déjà tagués ok_converti sont ignorés automatiquement.
     """
     content_root = 'content'
@@ -282,18 +282,18 @@ def _convert_content_dir(media_type: str) -> None:
         return
     for mood in sorted(os.listdir(content_root)):
         mood_path = os.path.join(content_root, mood)
-        if not os.path.isdir(mood_path) or mood.startswith('_'):
+        if not os.path.isdir(mood_path) or mood.startswith('_') or mood == 'logos':
             continue
-        type_path = os.path.join(mood_path, media_type)
-        if not os.path.isdir(type_path):
+        try:
+            cats = os.listdir(mood_path)
+        except OSError:
             continue
-        # Fichiers directs dans content/{mood}/{media_type}/
-        _convert_directory_lite(type_path)
-        # Fichiers dans les sous-dossiers content set
-        for sub in sorted(os.listdir(type_path)):
-            sub_path = os.path.join(type_path, sub)
-            if os.path.isdir(sub_path) and not sub.startswith('_'):
-                _convert_directory_lite(sub_path)
+        for cat in sorted(cats):
+            if cat.startswith('_'):
+                continue
+            type_path = os.path.join(mood_path, cat, media_type)
+            if os.path.isdir(type_path):
+                _convert_directory_lite(type_path)
 
 
 def convert_phase_videos_lite() -> None:

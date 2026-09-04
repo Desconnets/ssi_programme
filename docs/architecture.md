@@ -27,9 +27,9 @@ Le programme est composé de **deux parties** qui communiquent via HTTP :
 |---------|------|
 | `main.py` | Démarrage : conversion vidéos → inventaire → ouverture du socket HTTP + navigateur |
 | `handler.py` | Routes HTTP : statiques + `/api/*` + logs `[SSI·LIVE]` |
-| `phase_remote_state.py` | **État partagé** (thread-safe) : phases, fond, thème, mute, pause. Source de vérité du programme. |
-| `phase_video_convert.py` | Conversion vidéos → MP4 H.264 au démarrage (ffmpeg) |
-| `fsutil.py` | Liste les fichiers par extension, avec support des sous-dossiers de thème |
+| `phase_remote_state.py` | **État partagé** : phases, mood, catégorie, fond, mute, pause, webcam (luminosité + REC) |
+| `phase_video_convert.py` | Conversion vidéos → MP4 H.264 (audio conservé) dans `content/{mood}/{cat}/` |
+| `fsutil.py` | `list_content_files` / `get_available_content_sets` — catégories = dossiers |
 | `normalize.py` | Utilitaires ffmpeg (find_ffmpeg, try_install_ffmpeg) |
 | `live_report.py` | Inventaire au démarrage + alertes dossiers vides |
 | `logutil.py` | Préfixes de log `[SSI]`, `[SSI·LIVE]`, `[SSI·TC]`, etc. |
@@ -45,8 +45,9 @@ Le programme est composé de **deux parties** qui communiquent via HTTP :
 | `js/main.js` | Point d'entrée : charge les médias, démarre le micro, lance le cycle visuel au 1er clic |
 | `js/audio.js` | Micro → AnalyserNode Web Audio → beat/basse/overall (niveaux 0–1) |
 | `js/visuals.js` | Boucle `requestAnimationFrame` : pulse fond, shake fenêtre, comportements stickers |
-| `js/phases.js` | **Moteur des phases** : snake, boom, fenêtre vidéo, logo, webcam + commandes télécommande |
-| `js/phase-remote.js` | Poll `GET /api/phase-remote` toutes les 450 ms → applique l'état serveur sur la scène |
+| `js/phases.js` | **Moteur des phases** + mute + luminosité webcam + overlay REC |
+| `js/phase-remote.js` | Poll `GET /api/phase-remote` ~450 ms → mood, catégorie, phases, webcam |
+| `js/webcam-grain.js` | Grain canvas sur la webcam |
 | `js/background-playback.js` | Fond vidéo (crossfade, rotation auto) |
 | `js/api.js` | Charge les listes de médias au démarrage |
 | `js/config.js` | Constantes JS : durées, seuils, ratios |
@@ -61,9 +62,12 @@ Page distincte (`:3000/phase_panel.html`) utilisée par l'opérateur.
 
 Toutes les actions sont des `POST /api/phase-remote` avec un corps JSON :
 - `{ "phase": "snake" }` — déclenche une phase
-- `{ "theme": "diagonal" }` — change le thème identité
+- `{ "theme": "dark" }` — mood visuel (`classique` \| `dark`)
+- `{ "contentSet": "jeux-video" }` — catégorie (nom de dossier) ; `""` = Racine
 - `{ "pausePhases": true }` — suspend le cycle visuel
-- `{ "videoMuted": false }` — active le son des vidéos
+- `{ "videoMuted": false }` — son des vidéos de phase
+- `{ "webcamBrightness": 1.4 }` — luminosité webcam (0.2–3.0)
+- `{ "webcamRecOverlay": true }` — overlay REC
 - `{ "bgGradientOpacity": 0.5 }` — opacité du dégradé
 - `{ "idleResumeMs": 30000 }` — délai avant reprise automatique
 
@@ -77,10 +81,10 @@ C'est ce mécanisme qui synchronise la télécommande et la scène sans recharge
 ```
 Télécommande          Serveur                    Scène
     │                    │                          │
-    ├─ POST { theme }──► │  _theme = 'diagonal'     │
+    ├─ POST { theme }──► │  _theme = 'dark'     │
     │                    │                          │
     │                    │ ◄── GET /api/phase-remote─┤  (poll 450ms)
-    │                    │─── { theme: 'diagonal' }─►│
+    │                    │─── { theme: 'dark' }─►│
     │                    │                          ├─ appliquer CSS
     │                    │                          ├─ recharger stickers
     │                    │                          └─ recharger vidéos
@@ -90,15 +94,14 @@ Champ `seq` : incrémenté à chaque commande active. La scène détecte `seq > 
 
 ---
 
-## Système de thèmes (SSI / Diagonal)
+## Système de thèmes (classique / dark)
 
-1. **`phase_remote_state.py`** stocke `_theme` (`'ssi'` | `'diagonal'`).
+1. **`phase_remote_state.py`** stocke `_theme` (`'classique'` | `'dark'`).
 2. Le GET renvoie `theme` dans le snapshot → la scène lit `data.theme` au poll.
 3. `phase-remote.js` pose `document.documentElement.dataset.appTheme = theme`.
-4. **`style.css`** contient les règles `[data-app-theme="diagonal"]` qui surchargent les couleurs.
-5. Les médias (stickers, vidéos, fonds) sont dans des sous-dossiers par thème :
-   `stickers/ssi/`, `stickers/diagonal/`, `phase_videos/ssi/`, etc.
-6. Si le sous-dossier est vide, repli automatique sur le dossier racine.
+4. **`style.css`** contient les règles `[data-app-theme="dark"]` qui surchargent les couleurs.
+5. Les médias sont dans `content/{mood}/{catégorie}/{stickers|videos|backgrounds}/`.
+6. Bouton catégorie → uniquement cette bibliothèque ; « Racine » → toutes les catégories du mood.
 
 ---
 
@@ -115,10 +118,10 @@ Voir la section TÉLÉCOMMANDE dans `js/phases.js` et `docs/remote-panel.md`.
 5. Contrôle dans `phase_panel.html` + `js/phase-panel-app.js`
 
 ### Nouveau thème visuel
-1. Ajouter l'id dans `VALID_THEMES` (`phase_remote_state.py`)
+1. Ajouter l'id dans `VALID_MOODS` (`phase_remote_state.py`)
 2. Ajouter un bloc `[data-app-theme="nouveau"]` dans `style.css`
-3. Créer les sous-dossiers `stickers/nouveau/`, `phase_videos/nouveau/`, `backgrounds/nouveau/`
-4. Ajouter un bouton dans `phase_panel.html`
+3. Créer `content/nouveau/{catégorie}/stickers|videos|backgrounds/`
+4. Ajouter un bouton mood dans `phase_panel.html`
 
 ---
 
@@ -130,23 +133,21 @@ Tout le contenu organisé est sous `content/`. Les dossiers racine `stickers/`, 
 content/
   logos/
     classique/   ← SSI-logo1.gif … SSI-logo4.gif
-    dark/        ← SSI-logo1_techno.gif … (versions glitchées)
+    dark/        ← SSI-logo1_techno.gif …
   classique/     ← mood SSI (couleurs violet/turquoise/rose)
-    stickers/
-      boom/         4 fichiers
-      jeux-video/  14 fichiers  (Nintendo, Pokémon, Sims, Tony Hawk…)
-      pop-culture/ 22 fichiers  (Harry Potter, Disney, Britney, Matrix…)
-      doux/         2 fichiers  (Ghibli, coeurs)
-    videos/
-      boom/         4 vidéos   (Daft Punk ×2, Mr Oizo, Rollercoaster)
-      jeux-video/  11 vidéos   (Nintendo, Sims, Pokémon, Scrubs, Rugrats…)
-      pop-culture/ 13 vidéos   (Matrix, Fight Club, Tarantino, zapping…)
-    backgrounds/
-      boom/ doux/ urban/ jeux-video/ pop-culture/
+    boom/
+      stickers/  videos/  backgrounds/
+    jeux-video/
+      stickers/  videos/  backgrounds/
+    pop-culture/
+      stickers/  videos/  backgrounds/
+    doux/
+      stickers/  videos/  backgrounds/
+    urban/
+      stickers/  videos/  backgrounds/
   dark/          ← mood glitché/électrique (fichiers _techno)
-    stickers/    (mêmes catégories, versions _techno)
-    videos/      (mêmes catégories, versions _techno)
-    backgrounds/ (mêmes catégories)
+    boom/  jeux-video/  pop-culture/  doux/  urban/
+      (chaque catégorie : stickers/ videos/ backgrounds/)
 
 stickers/        → repli final (vide — tout est dans content/)
 phase_videos/    → repli final (vide)
@@ -155,6 +156,8 @@ archive/         → code archivé (playlist-mode/)
 docs/            → documentation technique
 ```
 
+**Ajouter une catégorie** : créer `content/classique/ma-categorie/stickers/` (et videos/, backgrounds/). Le bouton s’appelle `ma-categorie`.
+
 ---
 
-*Dernière mise à jour : juin 2026*
+*Dernière mise à jour : septembre 2026*

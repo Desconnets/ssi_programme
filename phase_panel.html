@@ -386,6 +386,25 @@
         </label>
       </section>
 
+      <section class="panel-section" aria-labelledby="lbl-webcam">
+        <h2 id="lbl-webcam">Webcam</h2>
+        <div class="panel-field">
+          <label for="panelWebcamBrightness">Luminosité</label>
+          <div class="panel-row">
+            <input type="range" id="panelWebcamBrightness" min="20" max="300" value="100" step="5" aria-label="Luminosité webcam" />
+            <span id="panelWebcamBrightnessVal" class="panel-mono">100%</span>
+          </div>
+          <div class="panel-toolbar panel-toolbar--tight">
+            <button type="button" class="secondary" id="btnWebcamBrightnessApply">Appliquer</button>
+            <button type="button" class="secondary" id="btnWebcamBrightnessReset">Réinitialiser</button>
+          </div>
+        </div>
+        <label class="panel-check">
+          <input type="checkbox" id="panelWebcamRecOverlay" checked />
+          Overlay REC caméscope
+        </label>
+      </section>
+
       <section class="panel-section" aria-labelledby="lbl-bg">
         <h2 id="lbl-bg">Fond scène</h2>
         <p class="panel-field-hint">Dégradé au-dessus de la vidéo · fonds depuis <code>backgrounds/</code></p>

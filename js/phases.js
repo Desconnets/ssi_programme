@@ -110,6 +110,81 @@ export function setOsWindowVideoMuted(muted) {
     osWindowVideo.muted = _osWindowVideoMuted;
   }
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CONFIG — webcam luminosité + overlay REC
+// ═══════════════════════════════════════════════════════════════════════════
+
+/** Luminosité courante du flux webcam (CSS filter brightness). */
+let _webcamBrightness = 1.0;
+/** Overlay REC caméscope activé ? */
+let _webcamRecOverlay = true;
+/** @type {ReturnType<typeof setInterval> | null} */
+let _webcamRecTimecodeInterval = null;
+/** Timestamp de démarrage du timecode REC (ms). */
+let _webcamRecStartMs = 0;
+
+/**
+ * Applique la luminosité sur le flux webcam via CSS filter.
+ * Appelé par phase-remote.js quand `webcamBrightness` change.
+ * @param {number} value — 0.2 (sombre) à 3.0 (très lumineux), 1.0 = normal
+ */
+export function setWebcamBrightness(value) {
+  _webcamBrightness = typeof value === 'number' && Number.isFinite(value)
+    ? Math.max(0.2, Math.min(3.0, value))
+    : 1.0;
+  if (webcamVideo) {
+    webcamVideo.style.filter = _webcamBrightness === 1.0
+      ? ''
+      : `brightness(${_webcamBrightness})`;
+  }
+}
+
+/**
+ * Active / désactive l'overlay REC caméscope sur la phase webcam.
+ * Appelé par phase-remote.js quand `webcamRecOverlay` change.
+ * @param {boolean} enabled
+ */
+export function setWebcamRecOverlay(enabled) {
+  _webcamRecOverlay = Boolean(enabled);
+  const overlay = webcamLayer?.querySelector('.ssi-webcam-rec-overlay');
+  if (!overlay) return;
+  if (_webcamRecOverlay) {
+    overlay.hidden = false;
+  } else {
+    overlay.hidden = true;
+    _stopWebcamRecTimecode();
+  }
+}
+
+/** Démarre le timecode REC (appelé au démarrage de la phase webcam). */
+function _startWebcamRecTimecode() {
+  _stopWebcamRecTimecode();
+  _webcamRecStartMs = Date.now();
+  const overlay = webcamLayer?.querySelector('.ssi-webcam-rec-overlay');
+  const timecodeEl = overlay?.querySelector('.ssi-webcam-rec-timecode');
+  if (!timecodeEl) return;
+  const tick = () => {
+    const elapsed = Math.floor((Date.now() - _webcamRecStartMs) / 1000);
+    const hh = String(Math.floor(elapsed / 3600)).padStart(2, '0');
+    const mm = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
+    const ss = String(elapsed % 60).padStart(2, '0');
+    timecodeEl.textContent = `${hh}:${mm}:${ss}`;
+  };
+  tick();
+  _webcamRecTimecodeInterval = setInterval(tick, 1000);
+}
+
+/** Arrête et remet à zéro le timecode REC. */
+function _stopWebcamRecTimecode() {
+  if (_webcamRecTimecodeInterval !== null) {
+    clearInterval(_webcamRecTimecodeInterval);
+    _webcamRecTimecodeInterval = null;
+  }
+  const overlay = webcamLayer?.querySelector('.ssi-webcam-rec-overlay');
+  const timecodeEl = overlay?.querySelector('.ssi-webcam-rec-timecode');
+  if (timecodeEl) timecodeEl.textContent = '00:00:00';
+}
 /**
  * File aléatoire pour la phase fenêtre OS, préparée au début du SUPER BOOM
  * (permet de précharger la même URL ~60 s avant la fin du boom).
@@ -791,6 +866,7 @@ function clearWebcamTimers() {
 
 /** Nettoyage immédiat flux webcam + calque */
 function hideWebcamLayerImmediate() {
+  _stopWebcamRecTimecode();
   stopWebcamGrainLoop();
   clearWebcamTimers();
   if (webcamResizeListener) {
@@ -970,6 +1046,16 @@ export function startWebcamPhase() {
       };
       window.addEventListener('resize', webcamResizeListener);
 
+      if (webcamVideo) {
+        webcamVideo.style.filter = _webcamBrightness === 1.0
+          ? ''
+          : `brightness(${_webcamBrightness})`;
+      }
+      const recOverlay = webcamLayer.querySelector('.ssi-webcam-rec-overlay');
+      if (recOverlay) {
+        recOverlay.hidden = !_webcamRecOverlay;
+      }
+
       webcamLayer.hidden = false;
       webcamLayer.setAttribute('aria-hidden', 'false');
       requestAnimationFrame(() => {
@@ -977,6 +1063,7 @@ export function startWebcamPhase() {
           if (gen !== webcamGeneration) return;
           webcamLayer.classList.add('ssi-os-window-layer--open');
           startWebcamGrainLoop();
+          if (_webcamRecOverlay) _startWebcamRecTimecode();
         });
       });
 

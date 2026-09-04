@@ -57,7 +57,7 @@
 
 | # | Étape | Statut | Notes |
 |---|-------|--------|-------|
-| C1 | Architecture `content/` | ✅ | `content/{mood}/{type}/{set}/` + `content/logos/` |
+| C1 | Architecture `content/` | ✅ | `content/{mood}/{catégorie}/{type}/` + `content/logos/` |
 | C2 | Moods classique/dark | ✅ | Remplacent ssi/diagonal. CSS `[data-app-theme="dark"]` |
 | C3 | 5 catégories de contenu | ✅ | boom / jeux-video / pop-culture / urban / doux |
 | C4 | Contenu _techno dark | ✅ | Versions glitchées de tous les stickers et vidéos classique |
@@ -66,6 +66,15 @@
 | C7 | Conversion dans `content/` | ✅ | `_convert_content_dir()` dans `phase_video_convert.py` |
 | C8 | Fix rechargement mood | ✅ | Flag calculé avant mise à jour état dans `phase-remote.js` |
 | C9 | Fix boom+vidéo simultanés | ✅ | `animateStickersOut(callback)` dans `phases.js` |
+| C10 | Catégorie d’abord | ✅ | `content/{mood}/{cat}/stickers|videos|backgrounds/` — bouton = nom du dossier |
+
+## Étapes septembre 2026 — Webcam + doc
+
+| # | Étape | Statut | Notes |
+|---|-------|--------|-------|
+| W1 | Luminosité webcam | ✅ | `webcamBrightness` (0.2–3.0), slider télécommande, CSS `filter: brightness()` |
+| W2 | Overlay REC | ✅ | Point clignotant + timecode ; `webcamRecOverlay` |
+| D1 | Doc alignée | ✅ | README, CHANGELOG, architecture, file-index, remote-panel |
 
 ## Prochaines étapes possibles (optionnel)
 
