@@ -48,31 +48,13 @@ VALID_MOODS = frozenset({'classique', 'dark'})
 # Content set actif — sous-dossier de contenu (boom, jeux-video, etc.) ; vide = repli sur mood
 _content_set: str = ''
 
-# Whether phases automatically go to the next when finished or stay awake indefinitely
-_phases_auto_advance: bool = True
-
 # Pause du cycle visuel (phases) — fond + CRT continuent
 _phases_paused: bool = False
 
 # Son des vidéos phase_videos/ — muet par défaut, activable depuis la télécommande
 _video_muted: bool = True
 
-# Webcam : luminosité (filtre CSS brightness) — 1.0 = normale
-_webcam_brightness: float = 1.0
-_WEBCAM_BRIGHTNESS_MIN = 0.2
-_WEBCAM_BRIGHTNESS_MAX = 3.0
-
-# Webcam : overlay « REC caméscope » — activé par défaut
-_webcam_rec_overlay: bool = True
-
 VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam'})
-
-# Phases proposées par la sélection automatique (séquentielle ou aléatoire).
-# Désactiver une phase ne l'empêche pas d'être déclenchée manuellement.
-_enabled_phases: set[str] = set(VALID_PHASES)
-
-VALID_PHASE_SELECT_MODES = frozenset({'sequential', 'random'})
-_phase_select_mode: str = 'sequential'
 
 # Ordre des boutons dans phase_panel.html / futurs clients — ajouter une phase : VALID_PHASES + ce tuple + libellé.
 PANEL_PHASE_ORDER: tuple[str, ...] = (
@@ -195,14 +177,6 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'contentSet': _content_set,
         'phasesPaused': _phases_paused,
         'videoMuted': _video_muted,
-<<<<<<< Updated upstream
-        'phaseAutoAdvance': _phases_auto_advance,
-        'enabledPhases': [p for p in PANEL_PHASE_ORDER if p in _enabled_phases],
-        'phaseSelectMode': _phase_select_mode,
-=======
-        'webcamBrightness': _webcam_brightness,
-        'webcamRecOverlay': _webcam_rec_overlay,
->>>>>>> Stashed changes
     }
 
 
@@ -227,13 +201,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     « phase » est optionnel si seuls des réglages fond sont envoyés.
     """
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
-<<<<<<< Updated upstream
-    global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set, _phases_auto_advance
-    global _enabled_phases, _phase_select_mode
-=======
     global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set
-    global _webcam_brightness, _webcam_rec_overlay
->>>>>>> Stashed changes
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -246,43 +214,20 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_idle_resume = 'idleResumeMs' in data
     has_theme = 'theme' in data
     has_pause = 'pausePhases' in data
-    has_auto_advance = 'phaseAutoAdvance' in data
     has_video_muted = 'videoMuted' in data
     has_content_set = 'contentSet' in data
-<<<<<<< Updated upstream
-    has_enabled_phases = 'enabledPhases' in data
-    has_select_mode = 'phaseSelectMode' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
             and not has_idle_resume and not has_theme and not has_pause \
-            and not has_auto_advance and not has_enabled_phases and not has_select_mode \
             and not has_video_muted and not has_content_set:
         raise ValueError(
-            'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, enabledPhases, phaseSelectMode'
-            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet'
-=======
-    has_webcam_brightness = 'webcamBrightness' in data
-    has_webcam_rec_overlay = 'webcamRecOverlay' in data
-
-    if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
-            and not has_idle_resume and not has_theme and not has_pause \
-            and not has_video_muted and not has_content_set \
-            and not has_webcam_brightness and not has_webcam_rec_overlay:
-        raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, '
-            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, videoMuted, contentSet, '
-            'webcamBrightness, webcamRecOverlay'
->>>>>>> Stashed changes
+            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, videoMuted, contentSet'
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
         and not has_bg_auto and not has_bg_index and not has_theme \
-<<<<<<< Updated upstream
-        and not has_pause and not has_video_muted and not has_content_set and not has_auto_advance
-=======
-        and not has_pause and not has_video_muted and not has_content_set \
-        and not has_webcam_brightness and not has_webcam_rec_overlay
->>>>>>> Stashed changes
+        and not has_pause and not has_video_muted and not has_content_set
 
     with _lock:
         if has_phase:
@@ -344,30 +289,9 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
                 # Invalider les caches de listes médias pour forcer un re-scan
                 _pv_list_cache = None
                 _bg_list_cache = None
-        
-        if has_enabled_phases:
-            raw = data.get('enabledPhases')
-            if not isinstance(raw, list):
-                raise ValueError('enabledPhases doit être une liste de phases')
-            cleaned = {str(p).strip().lower().replace('-', '_') for p in raw}
-            invalid = cleaned - VALID_PHASES
-            if invalid:
-                raise ValueError(f'enabledPhases invalide(s): {sorted(invalid)} (attendu: {sorted(VALID_PHASES)})')
-            if not cleaned:
-                raise ValueError('enabledPhases ne peut pas être vide (au moins une phase active)')
-            _enabled_phases = cleaned
-
-        if has_select_mode:
-            m = str(data.get('phaseSelectMode', '')).strip().lower()
-            if m not in VALID_PHASE_SELECT_MODES:
-                raise ValueError(f'phaseSelectMode invalide: {m!r} (valeurs: {sorted(VALID_PHASE_SELECT_MODES)})')
-            _phase_select_mode = m
 
         if has_pause:
             _phases_paused = bool(data.get('pausePhases'))
-
-        if has_auto_advance:
-            _phases_auto_advance = bool(data.get('phaseAutoAdvance'))
 
         if has_video_muted:
             _video_muted = bool(data.get('videoMuted'))
@@ -378,16 +302,6 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
                 _content_set = cs
                 _pv_list_cache = None
                 _bg_list_cache = None
-
-        if has_webcam_brightness:
-            try:
-                bv = float(data.get('webcamBrightness', 1.0))
-            except (TypeError, ValueError) as e:
-                raise ValueError('webcamBrightness doit être un nombre (ex. 1.0)') from e
-            _webcam_brightness = max(_WEBCAM_BRIGHTNESS_MIN, min(_WEBCAM_BRIGHTNESS_MAX, bv))
-
-        if has_webcam_rec_overlay:
-            _webcam_rec_overlay = bool(data.get('webcamRecOverlay'))
 
         if not idle_only:
             _seq += 1

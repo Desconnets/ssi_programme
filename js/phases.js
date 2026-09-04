@@ -56,8 +56,6 @@ import { attachVideoLoadListeners } from './video-load-log.js';
 import { attachVideoLifecycle } from './video-lifecycle.js';
 import { abortBrowserMediaWarm } from './browser-cache-warm.js';
 import { startWebcamGrainLoop, stopWebcamGrainLoop } from './webcam-grain.js';
-import { onPhaseEnded, startPhase, pickNextPhase, isAutoAdvanceEnabled } from './phase-manager.js';
-import { PHASE } from './phase-manager.js';
 
 const stickersLayer = document.getElementById('stickersLayer');
 const sceneEl = document.getElementById('scene');
@@ -74,7 +72,9 @@ let snakeSet = [];
 let currentSnakeSetIndex = 0;
 let snakeCyclesDone = 0;
 let snakeTimer = null;
+let superBoomTimer = null;
 let inSuperBoom = false;
+let logoTimer = null;
 let logoUrl = null;
 
 /** @type {string[]} URLs /api/phase-videos — dossier phase_videos/ */
@@ -109,81 +109,6 @@ export function setOsWindowVideoMuted(muted) {
   if (osWindowVideo) {
     osWindowVideo.muted = _osWindowVideoMuted;
   }
-}
-
-// ═══════════════════════════════════════════════════════════════════════════
-//  CONFIG — webcam luminosité + overlay REC
-// ═══════════════════════════════════════════════════════════════════════════
-
-/** Luminosité courante du flux webcam (CSS filter brightness). */
-let _webcamBrightness = 1.0;
-/** Overlay REC caméscope activé ? */
-let _webcamRecOverlay = true;
-/** @type {ReturnType<typeof setInterval> | null} */
-let _webcamRecTimecodeInterval = null;
-/** Timestamp de démarrage du timecode REC (ms). */
-let _webcamRecStartMs = 0;
-
-/**
- * Applique la luminosité sur le flux webcam via CSS filter.
- * Appelé par phase-remote.js quand `webcamBrightness` change.
- * @param {number} value — 0.2 (sombre) à 3.0 (très lumineux), 1.0 = normal
- */
-export function setWebcamBrightness(value) {
-  _webcamBrightness = typeof value === 'number' && Number.isFinite(value)
-    ? Math.max(0.2, Math.min(3.0, value))
-    : 1.0;
-  if (webcamVideo) {
-    webcamVideo.style.filter = _webcamBrightness === 1.0
-      ? ''
-      : `brightness(${_webcamBrightness})`;
-  }
-}
-
-/**
- * Active / désactive l'overlay REC caméscope sur la phase webcam.
- * Appelé par phase-remote.js quand `webcamRecOverlay` change.
- * @param {boolean} enabled
- */
-export function setWebcamRecOverlay(enabled) {
-  _webcamRecOverlay = Boolean(enabled);
-  const overlay = webcamLayer?.querySelector('.ssi-webcam-rec-overlay');
-  if (!overlay) return;
-  if (_webcamRecOverlay) {
-    overlay.hidden = false;
-  } else {
-    overlay.hidden = true;
-    _stopWebcamRecTimecode();
-  }
-}
-
-/** Démarre le timecode REC (appelé au démarrage de la phase webcam). */
-function _startWebcamRecTimecode() {
-  _stopWebcamRecTimecode();
-  _webcamRecStartMs = Date.now();
-  const overlay = webcamLayer?.querySelector('.ssi-webcam-rec-overlay');
-  const timecodeEl = overlay?.querySelector('.ssi-webcam-rec-timecode');
-  if (!timecodeEl) return;
-  const tick = () => {
-    const elapsed = Math.floor((Date.now() - _webcamRecStartMs) / 1000);
-    const hh = String(Math.floor(elapsed / 3600)).padStart(2, '0');
-    const mm = String(Math.floor((elapsed % 3600) / 60)).padStart(2, '0');
-    const ss = String(elapsed % 60).padStart(2, '0');
-    timecodeEl.textContent = `${hh}:${mm}:${ss}`;
-  };
-  tick();
-  _webcamRecTimecodeInterval = setInterval(tick, 1000);
-}
-
-/** Arrête et remet à zéro le timecode REC. */
-function _stopWebcamRecTimecode() {
-  if (_webcamRecTimecodeInterval !== null) {
-    clearInterval(_webcamRecTimecodeInterval);
-    _webcamRecTimecodeInterval = null;
-  }
-  const overlay = webcamLayer?.querySelector('.ssi-webcam-rec-overlay');
-  const timecodeEl = overlay?.querySelector('.ssi-webcam-rec-timecode');
-  if (timecodeEl) timecodeEl.textContent = '00:00:00';
 }
 /**
  * File aléatoire pour la phase fenêtre OS, préparée au début du SUPER BOOM
@@ -370,7 +295,7 @@ function acquireWebcamStreamForPhase() {
 // ═══════════════════════════════════════════════════════════════════════════
 //  PHASE SNAKE
 // ═══════════════════════════════════════════════════════════════════════════
-export function prepareSnakeSet() {
+function prepareSnakeSet() {
   const pool = allStickerUrls.slice();
   if (!pool.length) {
     snakeSet = [];
@@ -413,22 +338,13 @@ function animateStickersOut(callback) {
 
 function startVisualCycle() {
   if (inSuperBoom) return;
-  /* Prépare la file + précharge la 1ʳᵉ vidéo tout de suite (durée = SUPER_BOOM_DURATION_MS dans config) */
-  if (phaseVideoUrls.length) {
-    const q = shuffleInPlace(phaseVideoUrls.slice());
-    osWindowPreparedQueue = q;
-    prefetchOsWindowVideoUrl(q[0]);
-    debugLog('[PHASE·VIDÉO] Préchargement —', liveShortName(q[0]), '(pendant le Boom,', q.length, 'vidéo(s) en file)');
-  } else {
-    osWindowPreparedQueue = null;
-  }
   if (!snakeSet.length && allStickerUrls.length) {
     prepareSnakeSet();
   }
-  startPhase(pickNextPhase());
+  playNextSnakeSticker();
 }
 
-export function playNextSnakeSticker() {
+function playNextSnakeSticker() {
   if (snakeTimer) {
     clearTimeout(snakeTimer);
     snakeTimer = null;
@@ -437,13 +353,7 @@ export function playNextSnakeSticker() {
   if (!snakeSet.length) return;
 
   if (snakeCyclesDone >= 3) {
-    if (!isAutoAdvanceEnabled()) {
-      /* Manual mode : we reset the snakeCyclesDone counter */
-      snakeCyclesDone = 0;
-      playNextSnakeSticker();
-      return;
-    }
-    animateStickersOut(onPhaseEnded);
+    animateStickersOut(() => startSuperBoom());
     return;
   }
 
@@ -460,7 +370,9 @@ export function playNextSnakeSticker() {
     currentSnakeSetIndex = (currentSnakeSetIndex + 1) % snakeSet.length;
     snakeCyclesDone += 1;
 
-    snakeTimer = setTimeout(playNextSnakeSticker, SNAKE_STICKER_LIFETIME_MS);
+    snakeTimer = setTimeout(() => {
+      playNextSnakeSticker();
+    }, SNAKE_STICKER_LIFETIME_MS);
   });
 }
 
@@ -650,16 +562,24 @@ function playOsWindowVideoResilient(video, isStale, onPlaying, onGiveUp) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  PHASE SUPER BOOM
 // ═══════════════════════════════════════════════════════════════════════════
-export function startSuperBoom() {
+function startSuperBoom() {
   inSuperBoom = true;
   if (!stickersLayer) return;
-
-  clearStickers();
 
   /* Libère le serveur Python : plus de fetch warm en parallèle quand la vidéo va être demandée */
   abortBrowserMediaWarm();
 
   reportLiveEvent('super_boom', { nombre: allStickerUrls.length });
+
+  /* Prépare la file + précharge la 1ʳᵉ vidéo tout de suite (durée = SUPER_BOOM_DURATION_MS dans config) */
+  if (phaseVideoUrls.length) {
+    const q = shuffleInPlace(phaseVideoUrls.slice());
+    osWindowPreparedQueue = q;
+    prefetchOsWindowVideoUrl(q[0]);
+    debugLog('[PHASE·VIDÉO] Préchargement —', liveShortName(q[0]), '(pendant le Boom,', q.length, 'vidéo(s) en file)');
+  } else {
+    osWindowPreparedQueue = null;
+  }
 
   allStickerUrls.forEach((url, idx) => {
     const img = document.createElement('img');
@@ -689,12 +609,19 @@ export function startSuperBoom() {
     img.style.opacity = '1';
     stickersLayer.appendChild(img);
   });
-}
 
-export function stopSuperBoom(){
-  inSuperBoom = false;
-  clearStickers();
-  onPhaseEnded();
+  if (superBoomTimer) {
+    clearTimeout(superBoomTimer);
+    superBoomTimer = null;
+  }
+
+  superBoomTimer = setTimeout(() => {
+    inSuperBoom = false;
+    /* Attendre que les stickers du boom aient fini de sortir avant d'ouvrir la fenêtre vidéo */
+    animateStickersOut(() => {
+      startOsWindowPhase();
+    });
+  }, SUPER_BOOM_DURATION_MS);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -866,7 +793,6 @@ function clearWebcamTimers() {
 
 /** Nettoyage immédiat flux webcam + calque */
 function hideWebcamLayerImmediate() {
-  _stopWebcamRecTimecode();
   stopWebcamGrainLoop();
   clearWebcamTimers();
   if (webcamResizeListener) {
@@ -928,12 +854,20 @@ function runWhenBothOsWebcamClosed(done) {
  * Arrête timers et ferme calques avec les mêmes animations / sorties stickers que le cycle normal.
  * @param {() => void} done
  */
-export function interruptAllPhases(done) {
+function interruptAllPhases(done) {
   const myGen = ++remoteInterruptGen;
 
   if (snakeTimer) {
     clearTimeout(snakeTimer);
     snakeTimer = null;
+  }
+  if (superBoomTimer) {
+    clearTimeout(superBoomTimer);
+    superBoomTimer = null;
+  }
+  if (logoTimer) {
+    clearTimeout(logoTimer);
+    logoTimer = null;
   }
   clearWebcamTimers();
   clearOsWindowTimers();
@@ -965,9 +899,65 @@ function clampPhaseVideoIndex(idx) {
   return Math.max(0, Math.min(phaseVideoUrls.length - 1, i));
 }
 
+/**
+ * Télécommande HTTP : interrompt le cycle en cours puis lance la phase demandée (mêmes animations).
+ * @param {string} phase snake | super_boom | os_video | logo | webcam
+ * @param {number | null | undefined} [videoIndex] index dans la liste API phase-videos (os_video)
+ */
+// ═══════════════════════════════════════════════════════════════════════════
+//  TÉLÉCOMMANDE — commandes distantes (phase-remote.js → ici)
+//  Ajouter une phase : VALID_PHASES + PANEL_PHASE_* dans phase_remote_state.py
+//  + un cas dans applyRemotePhaseCommand() + startXxxPhase() ici
+// ═══════════════════════════════════════════════════════════════════════════
+export function applyRemotePhaseCommand(phase, videoIndex) {
+  const p = String(phase || '')
+    .toLowerCase()
+    .replace(/-/g, '_');
+  const known = new Set(['snake', 'super_boom', 'os_video', 'logo', 'webcam']);
+  if (!known.has(p)) {
+    debugWarn('[SSI] Télécommande phase inconnue :', phase);
+    return;
+  }
+  interruptAllPhases(() => {
+    if (p === 'snake') {
+      snakeCyclesDone = 0;
+      currentSnakeSetIndex = 0;
+      prepareSnakeSet();
+      playNextSnakeSticker();
+      return;
+    }
+    if (p === 'super_boom') {
+      startSuperBoom();
+      return;
+    }
+    if (p === 'os_video') {
+      const url = phaseVideoUrls.length ? phaseVideoUrls[clampPhaseVideoIndex(videoIndex)] : null;
+      if (url) {
+        startOsWindowPhase({ forcedUrl: url });
+      } else {
+        reportLiveEvent('os_window_skip', { reason: 'telecommande_sans_video' });
+        startLogoPhase();
+      }
+      return;
+    }
+    if (p === 'logo') {
+      startLogoPhase();
+      return;
+    }
+    if (p === 'webcam') {
+      startWebcamPhase();
+    }
+  });
+}
+
 /** Reprise boucle standard (snake) après délai sans commande télécommande. */
 export function forceIdleResumeStandardCycle() {
-  startPhase(pickNextPhase());
+  interruptAllPhases(() => {
+    snakeCyclesDone = 0;
+    currentSnakeSetIndex = 0;
+    prepareSnakeSet();
+    playNextSnakeSticker();
+  });
 }
 
 /**
@@ -983,13 +973,16 @@ export function setPhasePaused(paused) {
     /* Passer par interruptAllPhases pour s'assurer qu'aucune animation
        de la pause précédente n'est encore en cours avant de redémarrer. */
     interruptAllPhases(() => {
-      startPhase(pickNextPhase());
+      snakeCyclesDone = 0;
+      currentSnakeSetIndex = 0;
+      prepareSnakeSet();
+      playNextSnakeSticker();
     });
   }
 }
 
 function resumeSnakeAfterWebcam() {
-  //prepareSnakeSet();
+  prepareSnakeSet();
   startVisualCycle();
 }
 
@@ -1001,7 +994,7 @@ function resumeSnakeAfterWebcam() {
 // ═══════════════════════════════════════════════════════════════════════════
 //  PHASE WEBCAM
 // ═══════════════════════════════════════════════════════════════════════════
-export function startWebcamPhase() {
+function startWebcamPhase() {
   clearWebcamTimers();
   hideWebcamLayerImmediate();
   webcamGeneration += 1;
@@ -1046,16 +1039,6 @@ export function startWebcamPhase() {
       };
       window.addEventListener('resize', webcamResizeListener);
 
-      if (webcamVideo) {
-        webcamVideo.style.filter = _webcamBrightness === 1.0
-          ? ''
-          : `brightness(${_webcamBrightness})`;
-      }
-      const recOverlay = webcamLayer.querySelector('.ssi-webcam-rec-overlay');
-      if (recOverlay) {
-        recOverlay.hidden = !_webcamRecOverlay;
-      }
-
       webcamLayer.hidden = false;
       webcamLayer.setAttribute('aria-hidden', 'false');
       requestAnimationFrame(() => {
@@ -1063,7 +1046,6 @@ export function startWebcamPhase() {
           if (gen !== webcamGeneration) return;
           webcamLayer.classList.add('ssi-os-window-layer--open');
           startWebcamGrainLoop();
-          if (_webcamRecOverlay) _startWebcamRecTimecode();
         });
       });
 
@@ -1072,27 +1054,19 @@ export function startWebcamPhase() {
         .then(() => {
           if (gen !== webcamGeneration) return;
           reportLiveEvent('webcam_phase', {});
-          const armWebcamPhaseTimer = () => {
-            webcamPhaseTimer = setTimeout(() => {
-              if (gen !== webcamGeneration) return;
-              if (!isAutoAdvanceEnabled()) {
-                /* If manual mode, we restart the timer */
-                armWebcamPhaseTimer();
-                return;
-              }
-              hideWebcamLayerAnimated(() => {
-                onPhaseEnded();
-              });
-            }, WEBCAM_PHASE_DURATION_MS);
-          };
-          armWebcamPhaseTimer();
+          webcamPhaseTimer = setTimeout(() => {
+            if (gen !== webcamGeneration) return;
+            hideWebcamLayerAnimated(() => {
+              resumeSnakeAfterWebcam();
+            });
+          }, WEBCAM_PHASE_DURATION_MS);
         })
         .catch(() => {
           if (gen !== webcamGeneration) return;
           reportLiveEvent('webcam_phase_skip', { reason: 'play_refusé' });
           debugLog('[SSI] Phase webcam : lecture refusée → snake');
           hideWebcamLayerImmediate();
-          onPhaseEnded();
+          resumeSnakeAfterWebcam();
         });
     };
 
@@ -1107,22 +1081,20 @@ export function startWebcamPhase() {
 /**
  * @param {{ forcedUrl?: string | null }} [opts] forcedUrl — vidéo imposée (télécommande), sinon file comme après Super Boom.
  */
-export function startOsWindowPhase(opts = {}) {
-  let forcedUrl =
+function startOsWindowPhase(opts = {}) {
+  const forcedUrl =
     typeof opts.forcedUrl === 'string' && opts.forcedUrl.length > 0 ? opts.forcedUrl : null;
-  if (!forcedUrl && opts.videoIndex != null && phaseVideoUrls.length) {
-    forcedUrl = phaseVideoUrls[clampPhaseVideoIndex(opts.videoIndex)];
-  }
+
   if (!forcedUrl && !phaseVideoUrls.length) {
     reportLiveEvent('os_window_skip', { reason: 'aucune_vidéo' });
     debugLog('[SSI] Phase fenêtre OS : aucun fichier dans phase_videos/ → enchaînement logo');
-    onPhaseEnded();
+    startLogoPhase();
     return;
   }
   if (!osWindowLayer || !osWindowVideo) {
     reportLiveEvent('os_window_skip', { reason: 'dom_manquant' });
     debugWarn('[SSI] Phase fenêtre OS : #ssiOsWindowLayer ou vidéo absent');
-    onPhaseEnded();
+    startLogoPhase();
     return;
   }
 
@@ -1144,16 +1116,16 @@ export function startOsWindowPhase(opts = {}) {
   const maxAttempts = Math.min(queue.length, OS_WINDOW_MAX_LOAD_ATTEMPTS);
   let attemptIndex = 0;
 
-  const stopAfterExhausted = () => {
+  const goLogoAfterExhausted = () => {
     reportLiveEvent('os_window_skip', { reason: 'épuisement_tentatives' });
     debugLog('[PHASE·VIDÉO] ✗ Toutes les tentatives épuisées → enchaînement logo');
     hideOsWindowLayerImmediate();
-    onPhaseEnded();
+    startLogoPhase();
   };
 
   const tryOne = () => {
     if (attemptIndex >= maxAttempts) {
-      stopAfterExhausted();
+      goLogoAfterExhausted();
       return;
     }
 
@@ -1186,7 +1158,6 @@ export function startOsWindowPhase(opts = {}) {
       }
     };
 
-    /** When video is finished */
     const completePhase = (reason) => {
       if (phaseFinishing) return;
       if (gen !== osWindowLoadGeneration) return;
@@ -1195,21 +1166,8 @@ export function startOsWindowPhase(opts = {}) {
       clearOsWindowTimers();
       hideOsWindowLayerAnimated(() => {
         debugLog('[PHASE·VIDÉO] Fin —', reason, '—', liveShortName(url));
-        onPhaseEnded();
+        startLogoPhase();
       });
-    };
-
-    const armOsWindowMaxTimer = () => {
-      osWindowMaxTimer = setTimeout(() => {
-        if (gen !== osWindowLoadGeneration) return;
-        if (!isAutoAdvanceEnabled()) {
-          /* If manual mode, we restart the timer */
-          armOsWindowMaxTimer();
-          return;
-        }
-        debugLog('[SSI] Phase fenêtre OS : durée max (garde-fou) → logo');
-        completePhase('timeout_max');
-      }, OS_WINDOW_PHASE_MAX_MS);
     };
 
     const failAttempt = (why) => {
@@ -1283,11 +1241,8 @@ export function startOsWindowPhase(opts = {}) {
 
       osWindowVideo.onended = () => {
         const elapsed = phaseStartMs > 0 ? Date.now() - phaseStartMs : Infinity;
-        const shouldLoop = (_osWindowMinLoopMs > 0 && elapsed < _osWindowMinLoopMs) || !isAutoAdvanceEnabled();
-        if (shouldLoop) {
-          /* Reboucle : pas encore assez de temps (thème Diagonal), ou mode manuel —
-             on ne coupe jamais la vidéo. maxTimer continue comme garde-fou absolu (et
-             respecte lui aussi le mode manuel). */
+        if (_osWindowMinLoopMs > 0 && elapsed < _osWindowMinLoopMs) {
+          /* Reboucle : pas encore assez de temps — maxTimer continue comme garde-fou absolu */
           osWindowVideo.currentTime = 0;
           osWindowVideo.play().catch(() => {
             clearOsWindowMaxTimer();
@@ -1346,7 +1301,11 @@ export function startOsWindowPhase(opts = {}) {
             }, OS_WINDOW_PLAYING_WATCHDOG_MS);
           }
 
-          armOsWindowMaxTimer();
+          osWindowMaxTimer = setTimeout(() => {
+            if (gen !== osWindowLoadGeneration) return;
+            debugLog('[SSI] Phase fenêtre OS : durée max (garde-fou) → logo');
+            completePhase('timeout_max');
+          }, OS_WINDOW_PHASE_MAX_MS);
         },
         (err) => {
           if (gen !== osWindowLoadGeneration) return;
@@ -1419,10 +1378,10 @@ export function startOsWindowPhase(opts = {}) {
 // ═══════════════════════════════════════════════════════════════════════════
 //  PHASE LOGO
 // ═══════════════════════════════════════════════════════════════════════════
-export function startLogoPhase() {
+function startLogoPhase() {
   clearStickers();
   if (!logoUrl) {
-    onPhaseEnded();
+    startWebcamPhase();
     return;
   }
 
@@ -1455,11 +1414,16 @@ export function startLogoPhase() {
   img.style.transform = 'translate(-50%, -50%) scale(1)';
   img.style.opacity = '1';
   stickersLayer.appendChild(img);
-}
 
-export function stopLogoPhase(){
-  clearStickers();
-  onPhaseEnded();
+  if (logoTimer) {
+    clearTimeout(logoTimer);
+    logoTimer = null;
+  }
+
+  logoTimer = setTimeout(() => {
+    clearStickers();
+    startWebcamPhase();
+  }, LOGO_PHASE_DURATION_MS);
 }
 
 /**

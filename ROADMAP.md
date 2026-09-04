@@ -64,17 +64,17 @@
 | C5 | Télécommande dynamique | ✅ | Boutons mood + content sets auto-détectés |
 | C6 | `fsutil.list_content_files()` | ✅ | Chargement 3 niveaux + logos toujours inclus |
 | C7 | Conversion dans `content/` | ✅ | `_convert_content_dir()` dans `phase_video_convert.py` |
-| C8 | Fix rechargement mood | ✅ | Flag calculé avant mise à jour état dans `phase-remote.js` |
+| C8 | Fix rechargement mood | ✅ | Flag calculé avant mise à jour d'état dans `phase-remote.js` |
 | C9 | Fix boom+vidéo simultanés | ✅ | `animateStickersOut(callback)` dans `phases.js` |
-| C10 | Catégorie d’abord | ✅ | `content/{mood}/{cat}/stickers|videos|backgrounds/` — bouton = nom du dossier |
 
-## Étapes septembre 2026 — Webcam + doc
+## Étapes septembre 2026 — Catégorie d’abord + webcam
 
 | # | Étape | Statut | Notes |
 |---|-------|--------|-------|
-| W1 | Luminosité webcam | ✅ | `webcamBrightness` (0.2–3.0), slider télécommande, CSS `filter: brightness()` |
-| W2 | Overlay REC | ✅ | Point clignotant + timecode ; `webcamRecOverlay` |
-| D1 | Doc alignée | ✅ | README, CHANGELOG, architecture, file-index, remote-panel |
+| S1 | Catégorie d’abord | ✅ | `content/{mood}/{cat}/stickers\|videos\|backgrounds/` — bouton = nom du dossier |
+| S2 | Conversion + inventaire | ✅ | `_convert_content_dir` et `live_report` suivent le nouvel arbre |
+| S3 | Luminosité webcam | ✅ | `webcamBrightness` (slider télécommande, filtre CSS) |
+| S4 | Overlay REC caméscope | ✅ | `webcamRecOverlay` + timecode pendant la phase webcam |
 
 ## Prochaines étapes possibles (optionnel)
 

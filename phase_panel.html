@@ -283,7 +283,7 @@
       flex-wrap: wrap;
       gap: 0.4rem;
     }
-    .content-set-btn, .mode-btn {
+    .content-set-btn {
       padding: 0.45rem 0.7rem;
       font-size: 0.85rem;
       font-weight: 600;
@@ -295,10 +295,10 @@
       transition: opacity 0.15s, box-shadow 0.15s, border-color 0.15s;
     }
     @media (prefers-color-scheme: dark) {
-      .content-set-btn, .mode-btn { background: #2a2a2a; color: #eee; border-color: #555; }
+      .content-set-btn { background: #2a2a2a; color: #eee; border-color: #555; }
     }
-    .content-set-btn:hover, .mode-btn:hover { opacity: 0.9; }
-    .content-set-btn.active, .mode-btn.active {
+    .content-set-btn:hover { opacity: 0.9; }
+    .content-set-btn.active {
       opacity: 1;
       border-color: #f040b0;
       box-shadow: 0 0 0 2px #f040b0;
@@ -307,13 +307,6 @@
       border-color: #888;
       box-shadow: 0 0 0 2px #888;
     }
-
-    /* Boutons segmentés génériques (auto/manuel, séquentiel/aléatoire…) */
-    .mode-btn-group {
-      display: flex;
-      gap: 0.4rem;
-    }
-    .mode-btn { flex: 1; }
   </style>
 </head>
 <body>
@@ -339,26 +332,14 @@
         </div>
       </section>
 
-      <section class="panel-section" aria-labelledby="lbl-automode">
-        <h2 id="lbl-automode">Mode auto/manuel</h2>
-        <div class="mode-btn-group">
-          <button type="button" id="btnAutoAdvanceAuto" class="mode-btn">▶️ Avance Auto</button>
-          <button type="button" id="btnAutoAdvanceManual" class="mode-btn">✋ Manuel</button>
-        </div>
-        <div class="mode-btn-group" style="margin-top:0.4rem">
-          <button type="button" id="btnPhaseSelectModeSeq" class="mode-btn">➡️ Séquentiel</button>
-          <button type="button" id="btnPhaseSelectModeRandom" class="mode-btn">🔀 Aléatoire</button>
-        </div>
+      <section class="panel-section" aria-labelledby="lbl-actions">
+        <h2 id="lbl-actions">Actions</h2>
+        <div id="panelActions"></div>
         <div class="panel-toolbar panel-toolbar--tight" style="margin-top:0.55rem">
           <button type="button" id="btnPausePhases" class="panel-action-btn" style="width:100%;font-size:0.9rem">
             ⏸ Pause phases (fond uniquement)
           </button>
         </div>
-      </section>
-
-      <section class="panel-section" aria-labelledby="lbl-actions">
-        <h2 id="lbl-actions">Actions</h2>
-        <div id="panelActions"></div>
       </section>
 
       <section class="panel-section" aria-labelledby="lbl-idle">
@@ -383,25 +364,6 @@
         <label class="panel-check">
           <input type="checkbox" id="panelVideoMuted" checked />
           🔇 Muet (décocher pour activer le son de la vidéo)
-        </label>
-      </section>
-
-      <section class="panel-section" aria-labelledby="lbl-webcam">
-        <h2 id="lbl-webcam">Webcam</h2>
-        <div class="panel-field">
-          <label for="panelWebcamBrightness">Luminosité</label>
-          <div class="panel-row">
-            <input type="range" id="panelWebcamBrightness" min="20" max="300" value="100" step="5" aria-label="Luminosité webcam" />
-            <span id="panelWebcamBrightnessVal" class="panel-mono">100%</span>
-          </div>
-          <div class="panel-toolbar panel-toolbar--tight">
-            <button type="button" class="secondary" id="btnWebcamBrightnessApply">Appliquer</button>
-            <button type="button" class="secondary" id="btnWebcamBrightnessReset">Réinitialiser</button>
-          </div>
-        </div>
-        <label class="panel-check">
-          <input type="checkbox" id="panelWebcamRecOverlay" checked />
-          Overlay REC caméscope
         </label>
       </section>
 

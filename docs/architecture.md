@@ -27,9 +27,9 @@ Le programme est composé de **deux parties** qui communiquent via HTTP :
 |---------|------|
 | `main.py` | Démarrage : conversion vidéos → inventaire → ouverture du socket HTTP + navigateur |
 | `handler.py` | Routes HTTP : statiques + `/api/*` + logs `[SSI·LIVE]` |
-| `phase_remote_state.py` | **État partagé** : phases, mood, catégorie, fond, mute, pause, webcam (luminosité + REC) |
-| `phase_video_convert.py` | Conversion vidéos → MP4 H.264 (audio conservé) dans `content/{mood}/{cat}/` |
-| `fsutil.py` | `list_content_files` / `get_available_content_sets` — catégories = dossiers |
+| `phase_remote_state.py` | **État partagé** (thread-safe) : phases, fond, thème, mute, pause. Source de vérité du programme. |
+| `phase_video_convert.py` | Conversion vidéos → MP4 H.264 au démarrage (ffmpeg) |
+| `fsutil.py` | Liste les fichiers par extension, avec support des sous-dossiers de thème |
 | `normalize.py` | Utilitaires ffmpeg (find_ffmpeg, try_install_ffmpeg) |
 | `live_report.py` | Inventaire au démarrage + alertes dossiers vides |
 | `logutil.py` | Préfixes de log `[SSI]`, `[SSI·LIVE]`, `[SSI·TC]`, etc. |
@@ -45,9 +45,8 @@ Le programme est composé de **deux parties** qui communiquent via HTTP :
 | `js/main.js` | Point d'entrée : charge les médias, démarre le micro, lance le cycle visuel au 1er clic |
 | `js/audio.js` | Micro → AnalyserNode Web Audio → beat/basse/overall (niveaux 0–1) |
 | `js/visuals.js` | Boucle `requestAnimationFrame` : pulse fond, shake fenêtre, comportements stickers |
-| `js/phases.js` | **Moteur des phases** + mute + luminosité webcam + overlay REC |
-| `js/phase-remote.js` | Poll `GET /api/phase-remote` ~450 ms → mood, catégorie, phases, webcam |
-| `js/webcam-grain.js` | Grain canvas sur la webcam |
+| `js/phases.js` | **Moteur des phases** : snake, boom, fenêtre vidéo, logo, webcam + commandes télécommande |
+| `js/phase-remote.js` | Poll `GET /api/phase-remote` toutes les 450 ms → applique l'état serveur sur la scène |
 | `js/background-playback.js` | Fond vidéo (crossfade, rotation auto) |
 | `js/api.js` | Charge les listes de médias au démarrage |
 | `js/config.js` | Constantes JS : durées, seuils, ratios |
@@ -62,12 +61,9 @@ Page distincte (`:3000/phase_panel.html`) utilisée par l'opérateur.
 
 Toutes les actions sont des `POST /api/phase-remote` avec un corps JSON :
 - `{ "phase": "snake" }` — déclenche une phase
-- `{ "theme": "dark" }` — mood visuel (`classique` \| `dark`)
-- `{ "contentSet": "jeux-video" }` — catégorie (nom de dossier) ; `""` = Racine
+- `{ "theme": "diagonal" }` — change le thème identité
 - `{ "pausePhases": true }` — suspend le cycle visuel
-- `{ "videoMuted": false }` — son des vidéos de phase
-- `{ "webcamBrightness": 1.4 }` — luminosité webcam (0.2–3.0)
-- `{ "webcamRecOverlay": true }` — overlay REC
+- `{ "videoMuted": false }` — active le son des vidéos
 - `{ "bgGradientOpacity": 0.5 }` — opacité du dégradé
 - `{ "idleResumeMs": 30000 }` — délai avant reprise automatique
 
@@ -81,10 +77,10 @@ C'est ce mécanisme qui synchronise la télécommande et la scène sans recharge
 ```
 Télécommande          Serveur                    Scène
     │                    │                          │
-    ├─ POST { theme }──► │  _theme = 'dark'     │
+    ├─ POST { theme }──► │  _theme = 'diagonal'     │
     │                    │                          │
     │                    │ ◄── GET /api/phase-remote─┤  (poll 450ms)
-    │                    │─── { theme: 'dark' }─►│
+    │                    │─── { theme: 'diagonal' }─►│
     │                    │                          ├─ appliquer CSS
     │                    │                          ├─ recharger stickers
     │                    │                          └─ recharger vidéos

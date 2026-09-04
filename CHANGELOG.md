@@ -1,54 +1,39 @@
 # Changelog
 
-> Journal des évolutions. Dernière mise à jour : **septembre 2026**.
+## [Septembre 2026] — Catégories d’abord + webcam REC
 
-## [Septembre 2026] — Catégories d’abord + webcam (luminosité / REC)
+### Architecture `content/` (catégorie = dossier)
 
-### Architecture médias (inversion)
-
-Les catégories ne sont plus des sous-dossiers de `stickers/` / `videos/` / `backgrounds/`.  
-Chaque **mood** contient des **dossiers de catégorie** ; chaque catégorie contient les trois types de médias.
+Les médias ne sont plus `content/{mood}/{type}/{catégorie}/` mais **`content/{mood}/{catégorie}/{type}/`**.
 
 ```
 content/
-  logos/classique/    logos/dark/
+  logos/classique/   logos/dark/
   classique/
     boom/          stickers/  videos/  backgrounds/
     jeux-video/    stickers/  videos/  backgrounds/
-    pop-culture/   stickers/  videos/  backgrounds/
-    doux/          stickers/  videos/  backgrounds/
-    urban/         stickers/  videos/  backgrounds/
-  dark/
-    boom/  jeux-video/  pop-culture/  doux/  urban/
-      (même structure, fichiers _techno)
+    pop-culture/   …
+    doux/
+    urban/
+  dark/            (mêmes catégories)
 ```
 
-- Bouton télécommande = **nom du dossier** (`boom`, `jeux-video`, …).
-- Clic catégorie → uniquement `content/{mood}/{catégorie}/{type}/` (plus de mélange si le dossier est vide).
-- **Racine** → toutes les catégories du mood.
-- Nouveau dossier `content/classique/ma-categorie/` avec `stickers/`, `videos/`, `backgrounds/` → bouton automatique, **aucun JS à modifier**.
+| Sujet | Détail |
+|--------|--------|
+| **Bouton = nom du dossier** | `get_available_content_sets()` scanne `content/{mood}/`. Nouveau dossier `content/classique/anime/` → bouton **anime**, aucun JS à modifier. |
+| **Clic catégorie** | Charge uniquement `content/{mood}/{catégorie}/{stickers\|videos\|backgrounds}/`. Dossier vide → liste vide (plus de mélange avec tout le mood). |
+| **Racine** | Toutes les catégories du mood mélangées. Logos toujours `content/logos/{mood}/`. |
+| **Fichiers** | `fsutil.py`, `phase_video_convert.py` (`_convert_content_dir`), `live_report.py`. Migration des dossiers existants. Doc : `README.md`, `docs/architecture.md`, `docs/file-index.md`. |
 
-### Webcam
+### Webcam — luminosité + overlay REC
 
-- Slider **luminosité** 20–300 % (`webcamBrightness`, filtre CSS `brightness()`).
-- Overlay **REC caméscope** : point rouge clignotant + label REC + timecode `HH:MM:SS` (`webcamRecOverlay`).
+| Sujet | Détail |
+|--------|--------|
+| **Luminosité** | Slider télécommande (20–300 %) → POST `webcamBrightness` → CSS `filter: brightness()` sur `#ssiWebcamVideo`. |
+| **Overlay REC** | Case « Overlay REC caméscope » → `webcamRecOverlay`. Point rouge clignotant, label REC, timecode `HH:MM:SS` pendant la phase webcam. |
+| **Fichiers** | `phase_remote_state.py`, `phases.js`, `phase-remote.js`, `index.html`, `style.css`, `phase_panel.html`, `phase-panel-app.js`. |
 
-### Fichiers touchés
-
-| Fichier | Rôle dans cette mise à jour |
-|---------|-----------------------------|
-| `ssi_server/fsutil.py` | Scan `content/{mood}/{cat}/` ; `list_content_files` / `get_available_content_sets` |
-| `ssi_server/phase_video_convert.py` | Conversion `content/{mood}/{cat}/videos|backgrounds/` |
-| `ssi_server/live_report.py` | Inventaire au démarrage sur la nouvelle arborescence |
-| `ssi_server/phase_remote_state.py` | `contentSet` + `webcamBrightness` + `webcamRecOverlay` |
-| `ssi_server/handler.py` | GET listes médias via `list_content_files` ; `availableContentSets` |
-| `js/phases.js` | `setWebcamBrightness`, overlay REC + timecode |
-| `js/phase-remote.js` | Applique mood, catégorie, mute, luminosité, REC au poll |
-| `js/phase-panel-app.js` | Boutons catégories dynamiques + slider webcam + case REC |
-| `phase_panel.html` | Sections Mood, Contenu, Webcam |
-| `index.html` | Overlay `.ssi-webcam-rec-overlay` |
-| `style.css` | Styles REC (point, label, timecode) |
-| `README.md` · `docs/architecture.md` · `docs/file-index.md` · `docs/remote-panel.md` · `ROADMAP.md` | Doc alignée |
+**Relancer le serveur Python** après ces changements (le panneau JS se recharge tout seul, pas le process Python).
 
 ---
 
@@ -119,7 +104,7 @@ content/
 
 ---
 
-> Dernière mise à jour : **septembre 2026**. Pour l’usage : `README.md`. Pour les étapes : `ROADMAP.md`.
+> **Dernière mise à jour : septembre 2026** — voir aussi `ROADMAP.md` pour les étapes techniques et `README.md` pour l'usage.
 
 ---
 

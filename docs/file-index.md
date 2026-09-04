@@ -2,7 +2,7 @@
 
 > Référence complète de tous les fichiers de code et de configuration.  
 > Pour comprendre le fonctionnement global : lire `docs/architecture.md` en premier.  
-> Dernière mise à jour : **septembre 2026**.
+> Dernière mise à jour : juin 2026.
 
 ---
 
@@ -23,9 +23,9 @@
 
 | Fichier | Rôle | Modifier pour… |
 |---------|------|----------------|
-| `ssi_server/phase_remote_state.py` | **Source de vérité.** Phase, mood, catégorie, fond, mute, pause, idle, **luminosité webcam**, **overlay REC**. GET → `get_snapshot()`, POST → `post_remote_payload()`. | Ajouter un réglage télécommande |
-| `ssi_server/fsutil.py` | `list_content_files()` : `content/{mood}/{catégorie}/{type}/`. `get_available_content_sets()` : boutons = noms de dossiers. Logos `content/logos/{mood}/`. | Changer le scan disque |
-| `ssi_server/phase_video_convert.py` | Conversion ffmpeg au démarrage (MP4 H.264, audio conservé). Parcourt `content/{mood}/{cat}/videos|backgrounds/` + repli `phase_videos/` / `backgrounds/`. Originaux → `_archive/`. | Paramètres ffmpeg |
+| `ssi_server/phase_remote_state.py` | **Source de vérité.** État partagé thread-safe : phase, thème, fond, mute, pause, idle, etc. GET → `get_snapshot()`, POST → `post_remote_payload()`. | Ajouter un réglage télécommande |
+| `ssi_server/fsutil.py` | Liste les fichiers par extension. `list_files()` simple, `list_files_themed()` avec repli sur sous-dossier thème. Logue un warning sur erreur de permission. | Changer la logique de listage ou de thème |
+| `ssi_server/phase_video_convert.py` | Conversion vidéos au démarrage via ffmpeg (MP4 H.264, audio conservé). Gère `phase_videos/`, `backgrounds/` et leurs sous-dossiers thème. Originaux → `_archive/`. | Changer les paramètres ffmpeg (qualité, résolution) |
 | `ssi_server/normalize.py` | Utilitaires ffmpeg : `find_ffmpeg()`, `try_install_ffmpeg()`. (Les fonctions de normalisation audio sont dans `archive/playlist-mode/`) | Changer la détection de ffmpeg |
 
 ### Logs + rapport
@@ -51,7 +51,7 @@
 
 | Fichier | Rôle | Modifier pour… |
 |---------|------|----------------|
-| `js/phases.js` | Moteur des phases + mute vidéo + **luminosité webcam** + **timecode REC**. | Ajouter ou modifier une phase |
+| `js/phases.js` | **Moteur des phases.** Snake → Super Boom → Fenêtre Vidéo → Logo → Webcam → (boucle). Télécommande + pause + boucle min Diagonal. | Ajouter ou modifier une phase |
 | `js/visuals.js` | Boucle `requestAnimationFrame` : pulse fond au beat, shake fenêtre/webcam réactif au son, comportements stickers. | Modifier les réactions visuelles au son |
 | `js/behaviors.js` | Comportements stickers réactifs au son (6 behaviors par `dataset.behavior`). | Ajouter un nouveau comportement sonore |
 | `js/background-playback.js` | Fond vidéo : crossfade, rotation auto, pilotage par la télécommande. | Modifier le comportement du fond vidéo |
@@ -66,8 +66,8 @@
 
 | Fichier | Rôle | Modifier pour… |
 |---------|------|----------------|
-| `js/phase-remote.js` | Poll ~450 ms. Applique mood, catégorie (recharge médias), mute, pause, fond, **webcamBrightness**, **webcamRecOverlay**. | Nouveau champ serveur |
-| `js/phase-panel-app.js` | Panneau : phases, moods, catégories dynamiques, fond, mute, pause, idle, **luminosité webcam**, **REC**, journal. | Ajouter un contrôle |
+| `js/phase-remote.js` | Poll `GET /api/phase-remote` toutes les ~450 ms. Applique le thème, les phases, le mute, la pause, le fond. | Ajouter la lecture d'un nouveau champ serveur |
+| `js/phase-panel-app.js` | Logique du panneau télécommande : boutons phases, thème SSI/Diagonal, fond, mute, pause, idle, journal. | Ajouter un contrôle dans le panneau |
 
 ### Utilitaires
 
@@ -89,8 +89,8 @@
 
 | Fichier | Rôle | Modifier pour… |
 |---------|------|----------------|
-| `index.html` | Scène 16:9 : fond, stickers, fenêtre OS, webcam (grain + overlay REC), CRT. | Nouveau calque DOM |
-| `phase_panel.html` | Télécommande : Mood, Contenu, Actions, Reprise auto, Vidéo, **Webcam**, Fond, Journal. | Nouvelle section |
+| `index.html` | Page scène (16:9). Calques : fond, stickers, fenêtres OS/webcam, overlay REC, CRT, hint. | Ajouter un nouveau calque DOM (nouvelle phase) |
+| `phase_panel.html` | Télécommande web. Sections : Thème, Actions (phases), Reprise auto, Vidéo, Fond, Journal. | Ajouter une section de contrôle |
 
 ---
 
@@ -98,7 +98,7 @@
 
 | Fichier | Rôle | Modifier pour… |
 |---------|------|----------------|
-| `style.css` | Scène + overlay REC. Moods `[data-app-theme="classique"]` (défaut) et `[data-app-theme="dark"]`. | Style ou nouveau mood |
+| `style.css` | Tout le style de la scène + télécommande. Thème SSI (défaut) + `[data-app-theme="diagonal"]` pour Diagonal Cinéma. Contient : `.scene` 16:9, dégradés, fenêtre OS, VHS overlay, CRT, beat overlay. | Modifier un style visuel ou ajouter un thème |
 
 ---
 

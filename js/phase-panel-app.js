@@ -154,29 +154,17 @@ function fillBackgroundSelect(select, files) {
  * @param {Array<{ id: string, label: string, needsVideoIndex?: boolean, hint?: string }>} phases
  * @param {(meta: { id: string, label: string, needsVideoIndex?: boolean }) => void} onPhase
  */
-function renderPhaseButtons(container, phases, onPhase, enabledIds, onToggleEnabled) {
-   container.replaceChildren();
+function renderPhaseButtons(container, phases, onPhase) {
+  container.replaceChildren();
   for (const p of phases) {
-    const row = document.createElement('div');
-    row.className = 'panel-row';
-
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = enabledIds.has(p.id);
-    cb.title = 'Active dans le cycle automatique (séquentiel / aléatoire)';
-    cb.addEventListener('change', () => onToggleEnabled(p.id, cb.checked, cb));
-
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'panel-action-btn';
     b.dataset.phaseId = p.id;
     b.textContent = p.label;
     if (p.hint) b.title = p.hint;
-    b.style.flex = '1';
     b.addEventListener('click', () => onPhase(p));
-
-    row.append(cb, b);
-    container.appendChild(row);
+    container.appendChild(b);
   }
 }
 
@@ -207,18 +195,6 @@ async function bootstrap() {
   const panelContentSets = document.getElementById('panelContentSets');
   const btnContentSetNone = document.getElementById('btnContentSetNone');
   const btnPausePhases = document.getElementById('btnPausePhases');
-<<<<<<< Updated upstream
-  const btnAutoAdvanceAuto = document.getElementById('btnAutoAdvanceAuto');
-  const btnAutoAdvanceManual = document.getElementById('btnAutoAdvanceManual');
-  const btnPhaseSelectModeSeq = document.getElementById('btnPhaseSelectModeSeq');
-  const btnPhaseSelectModeRandom = document.getElementById('btnPhaseSelectModeRandom');
-=======
-  const webcamBrightnessInput = /** @type {HTMLInputElement} */ (document.getElementById('panelWebcamBrightness'));
-  const webcamBrightnessVal = document.getElementById('panelWebcamBrightnessVal');
-  const btnWebcamBrightnessApply = document.getElementById('btnWebcamBrightnessApply');
-  const btnWebcamBrightnessReset = document.getElementById('btnWebcamBrightnessReset');
-  const webcamRecOverlayCheck = /** @type {HTMLInputElement} */ (document.getElementById('panelWebcamRecOverlay'));
->>>>>>> Stashed changes
 
   if (
     !logEl ||
@@ -239,21 +215,9 @@ async function bootstrap() {
     !btnThemeSsi ||
     !btnThemeDiagonal ||
     !btnPausePhases ||
-    !btnAutoAdvanceAuto ||
-    !btnAutoAdvanceManual ||
     !videoMutedCheck ||
     !panelContentSets ||
-    !btnContentSetNone ||
-<<<<<<< Updated upstream
-    !btnPhaseSelectModeSeq ||
-    !btnPhaseSelectModeRandom
-=======
-    !webcamBrightnessInput ||
-    !webcamBrightnessVal ||
-    !btnWebcamBrightnessApply ||
-    !btnWebcamBrightnessReset ||
-    !webcamRecOverlayCheck
->>>>>>> Stashed changes
+    !btnContentSetNone
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -266,11 +230,6 @@ async function bootstrap() {
   };
   bgOpacity.addEventListener('input', syncOpacityLabel);
   syncOpacityLabel();
-
-  const syncBrightnessLabel = () => {
-    webcamBrightnessVal.textContent = `${webcamBrightnessInput.value}%`;
-  };
-  webcamBrightnessInput.addEventListener('input', syncBrightnessLabel);
 
   const runPhase = async (p) => {
     const vi = p.needsVideoIndex ? getSelectedVideoIndex(videoSelect) : null;
@@ -291,26 +250,13 @@ async function bootstrap() {
     }
   };
 
-  const onToggleEnabled = async (id, checked, cbEl) => {
-  const boxes = Array.from(actionsEl.querySelectorAll('input[type="checkbox"]'));
-  const nowChecked = boxes.filter((c) => c.checked).map((c) => c.closest('.panel-row').querySelector('[data-phase-id]').dataset.phaseId);
-    if (!checked && nowChecked.length === 0) {
-      cbEl.checked = true;
-      log.append('warn', 'Au moins une phase doit rester active');
-      return;
-    }
-    log.append('cmd', checked ? `Active ${id}` : `Désactive ${id}`);
-    const res = await postRemote({ enabledPhases: nowChecked });
-    logRemoteResult('POST enabledPhases', res);
-  };
-
   const refresh = async () => {
     try {
       const j = await fetchState();
       const phases =
         Array.isArray(j.panelPhases) && j.panelPhases.length > 0 ? j.panelPhases : FALLBACK_PANEL_PHASES;
 
-      renderPhaseButtons(actionsEl, phases, runPhase, new Set(Array.isArray(j.enabledPhases) ? j.enabledPhases : phases.map((p) => p.id)), onToggleEnabled)
+      renderPhaseButtons(actionsEl, phases, runPhase);
 
       fillVideoSelect(videoSelect, j.phaseVideoFiles || []);
       const bgFiles = j.backgroundVideoFiles || [];
@@ -333,14 +279,6 @@ async function bootstrap() {
       /* Sync case muet vidéo */
       videoMutedCheck.checked = j.videoMuted !== false;
 
-      /* Sync luminosité webcam */
-      const bv = typeof j.webcamBrightness === 'number' ? j.webcamBrightness : 1.0;
-      webcamBrightnessInput.value = String(Math.round(bv * 100));
-      webcamBrightnessVal.textContent = `${Math.round(bv * 100)}%`;
-
-      /* Sync overlay REC */
-      webcamRecOverlayCheck.checked = j.webcamRecOverlay !== false;
-
       /* Sync boutons mood */
       const activeTheme = typeof j.theme === 'string' ? j.theme : 'classique';
       btnThemeSsi.classList.toggle('active', activeTheme === 'classique');
@@ -356,14 +294,6 @@ async function bootstrap() {
       btnPausePhases.textContent = isPaused ? '▶ Reprendre les phases' : '⏸ Pause phases (fond uniquement)';
       btnPausePhases.style.background = isPaused ? '#2a6e2a' : '';
 
-      const isAuto = j.phaseAutoAdvance !== false;
-      btnAutoAdvanceAuto.classList.toggle('active', isAuto);
-      btnAutoAdvanceManual.classList.toggle('active', !isAuto);
-
-      const isRandom = j.phaseSelectMode === 'random';
-      btnPhaseSelectModeSeq.classList.toggle('active', !isRandom);
-      btnPhaseSelectModeRandom.classList.toggle('active', isRandom);
-  
       bgAuto.checked = Boolean(j.backgroundAutoRotate);
       const nBg = bgFiles.length;
       if (!j.backgroundAutoRotate && j.backgroundVideoIndex != null && nBg > 0) {
@@ -383,7 +313,7 @@ async function bootstrap() {
       const m = e && e.message ? e.message : String(e);
       log.append('err', 'GET /api/phase-remote', m);
       statusLine.textContent = m;
-      renderPhaseButtons(actionsEl, phases, runPhase, new Set(Array.isArray(j.enabledPhases) ? j.enabledPhases : phases.map((p) => p.id)), onToggleEnabled)
+      renderPhaseButtons(actionsEl, FALLBACK_PANEL_PHASES, runPhase);
     }
   };
 
@@ -531,48 +461,6 @@ async function bootstrap() {
     }
   });
 
-  const sendAutoAdvance = async (next) => {
-    log.append('cmd', next ? 'Mode auto' : 'Mode manuel');
-    try {
-      const res = await postRemote({ phaseAutoAdvance: next });
-      if (res.ok && res.json) {
-        const a = res.json.phaseAutoAdvance !== false;
-        btnAutoAdvanceAuto.classList.toggle('active', a);
-        btnAutoAdvanceManual.classList.toggle('active', !a);
-        log.append('ok', a ? 'Avance automatique' : 'Reste sur la phase');
-        statusLine.textContent = `seq=${res.json.seq} · ${a ? 'auto' : 'manuel'}`;
-      } else {
-        log.append('err', `HTTP ${res.status}`, res.text.slice(0, 500));
-      }
-    } catch (e) {
-      const m = e && e.message ? e.message : String(e);
-      log.append('err', 'POST auto/manuel', m);
-    }
-  };
-  btnAutoAdvanceAuto.addEventListener('click', () => sendAutoAdvance(true));
-  btnAutoAdvanceManual.addEventListener('click', () => sendAutoAdvance(false));
-
-  const sendPhaseSelectMode = async (mode) => {
-    log.append('cmd', mode === 'random' ? 'Mode aléatoire' : 'Mode séquentiel');
-    try {
-      const res = await postRemote({ phaseSelectMode: mode });
-      if (res.ok && res.json) {
-        const isRandom = res.json.phaseSelectMode === 'random';
-        btnPhaseSelectModeSeq.classList.toggle('active', !isRandom);
-        btnPhaseSelectModeRandom.classList.toggle('active', isRandom);
-        log.append('ok', isRandom ? 'Sélection aléatoire' : 'Sélection séquentielle');
-        statusLine.textContent = `seq=${res.json.seq} · ${isRandom ? 'random' : 'sequential'}`;
-      } else {
-        log.append('err', `HTTP ${res.status}`, res.text.slice(0, 500));
-      }
-    } catch (e) {
-      const m = e && e.message ? e.message : String(e);
-      log.append('err', 'POST phaseSelectMode', m);
-    }
-  };
-  btnPhaseSelectModeSeq.addEventListener('click', () => sendPhaseSelectMode('sequential'));
-  btnPhaseSelectModeRandom.addEventListener('click', () => sendPhaseSelectMode('random'));
-
   btnIdleResumeApply.addEventListener('click', async () => {
     let sec = parseInt(idleResumeSec.value, 10);
     if (!Number.isFinite(sec)) sec = 60;
@@ -615,49 +503,6 @@ async function bootstrap() {
         backgroundAutoRotate: false,
       });
       logRemoteResult('POST fond', res);
-    } catch (e) {
-      const m = e && e.message ? e.message : String(e);
-      log.append('err', 'POST', m);
-      statusLine.textContent = m;
-    }
-  });
-
-  btnWebcamBrightnessApply.addEventListener('click', async () => {
-    const pct = Math.max(20, Math.min(300, parseInt(webcamBrightnessInput.value, 10) || 100));
-    webcamBrightnessInput.value = String(pct);
-    syncBrightnessLabel();
-    const val = pct / 100;
-    log.append('cmd', 'Luminosité webcam', `${pct}%`);
-    try {
-      const res = await postRemote({ webcamBrightness: val });
-      logRemoteResult('POST luminosité webcam', res);
-    } catch (e) {
-      const m = e && e.message ? e.message : String(e);
-      log.append('err', 'POST', m);
-      statusLine.textContent = m;
-    }
-  });
-
-  btnWebcamBrightnessReset.addEventListener('click', async () => {
-    webcamBrightnessInput.value = '100';
-    syncBrightnessLabel();
-    log.append('cmd', 'Luminosité webcam', 'réinitialisation (1.0)');
-    try {
-      const res = await postRemote({ webcamBrightness: 1.0 });
-      logRemoteResult('POST luminosité webcam', res);
-    } catch (e) {
-      const m = e && e.message ? e.message : String(e);
-      log.append('err', 'POST', m);
-      statusLine.textContent = m;
-    }
-  });
-
-  webcamRecOverlayCheck.addEventListener('change', async () => {
-    const enabled = webcamRecOverlayCheck.checked;
-    log.append('cmd', enabled ? 'Overlay REC activé' : 'Overlay REC désactivé');
-    try {
-      const res = await postRemote({ webcamRecOverlay: enabled });
-      logRemoteResult('POST overlay REC', res);
     } catch (e) {
       const m = e && e.message ? e.message : String(e);
       log.append('err', 'POST', m);
