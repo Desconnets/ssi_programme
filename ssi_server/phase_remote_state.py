@@ -58,11 +58,15 @@ _phases_paused: bool = False
 # Son des vidéos phase_videos/ — muet par défaut, activable depuis la télécommande
 _video_muted: bool = True
 
-VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam', 'text'})
+VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam', 'text', 'clip'})
 
 # Phases proposées par la sélection automatique (séquentielle ou aléatoire).
 # Désactiver une phase ne l'empêche pas d'être déclenchée manuellement.
-_enabled_phases: set[str] = set(VALID_PHASES)
+# "clip" is deliberately excluded: manual-only phase (see dedicated user story),
+# never picked by the auto cycle — even if a client tries to add it to enabledPhases
+# (rejected in post_remote_payload below).
+AUTO_ADVANCE_PHASES: frozenset[str] = VALID_PHASES - frozenset({'clip'})
+_enabled_phases: set[str] = set(AUTO_ADVANCE_PHASES)
 
 VALID_PHASE_SELECT_MODES = frozenset({'sequential', 'random'})
 _phase_select_mode: str = 'sequential'
@@ -75,6 +79,7 @@ PANEL_PHASE_ORDER: tuple[str, ...] = (
     'logo',
     'text',
     'webcam',
+    'clip',
 )
 
 PANEL_PHASE_LABELS: dict[str, str] = {
@@ -84,10 +89,13 @@ PANEL_PHASE_LABELS: dict[str, str] = {
     'logo': 'Logo',
     'webcam': 'Webcam',
     'text': 'Texte',
+    'clip': 'Clip (avec son)',
 }
 
 # Indice vidéo obligatoire pour cette phase (extensible si d’autres phases en ont besoin).
 PANEL_PHASE_NEEDS_VIDEO: frozenset[str] = frozenset({'os_video'})
+# Same idea, but for the clips/ list (distinct from phase_videos/) — see /api/clips.
+PANEL_PHASE_NEEDS_CLIP_INDEX: frozenset[str] = frozenset({'clip'})
 
 
 def panel_phase_definitions() -> list[dict[str, Any]]:
@@ -104,6 +112,9 @@ def panel_phase_definitions() -> list[dict[str, Any]]:
                 'id': pid,
                 'label': PANEL_PHASE_LABELS.get(pid, pid),
                 'needsVideoIndex': pid in PANEL_PHASE_NEEDS_VIDEO,
+                'needsClipIndex': pid in PANEL_PHASE_NEEDS_CLIP_INDEX,
+                # Phase absent from the auto cycle: the panel shouldn't offer an "active in auto" checkbox.
+                'manualOnly': pid not in AUTO_ADVANCE_PHASES,
                 'hint': '',
             }
         )
@@ -117,6 +128,10 @@ _pv_list_cache: tuple[str, float, list[str]] | None = None  # (theme, expiry, fi
 # Liste backgrounds/ : même idée
 _bg_list_lock = threading.Lock()
 _bg_list_cache: tuple[str, float, list[str]] | None = None  # (theme, expiry, files)
+
+# clips/ list (Clip phase, audio active): flat folder, no mood/content set → no theme key.
+_clip_list_lock = threading.Lock()
+_clip_list_cache: tuple[float, list[str]] | None = None  # (expiry, files)
 
 
 def _phase_video_list_ttl_sec() -> float:
@@ -172,6 +187,28 @@ def get_cached_background_filenames() -> list[str]:
                 return files
         files = list_content_files('backgrounds', VIDEO_EXT, current_cs, current_mood, 'backgrounds')
         _bg_list_cache = (cache_key, now + ttl, files)
+        return files
+
+
+def get_cached_clip_filenames() -> list[str]:
+    """
+    Files from the flat clips/ folder (short TTL, thread-safe). Unlike phase_videos/
+    and backgrounds/, the Clip phase does not follow the mood/content-set logic: no
+    per-theme subfolders, a single file pool regardless of the active mood.
+    """
+    from .config import VIDEO_EXT
+    from .fsutil import list_files
+
+    global _clip_list_cache
+    now = time.monotonic()
+    ttl = _phase_video_list_ttl_sec()
+    with _clip_list_lock:
+        if _clip_list_cache is not None:
+            exp, files = _clip_list_cache
+            if now < exp:
+                return files
+        files = [f'clips/{f}' for f in list_files('clips', VIDEO_EXT)]
+        _clip_list_cache = (now + ttl, files)
         return files
 
 
@@ -311,18 +348,22 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
                 raise ValueError(f'mood invalide: {t!r} (valeurs: {sorted(VALID_MOODS)})')
             if t != _theme:
                 _theme = t
-                # Invalider les caches de listes médias pour forcer un re-scan
+                # Invalidate media list caches to force a re-scan
+                # (clips/ is not part of this: flat folder, no mood/content-set logic)
                 _pv_list_cache = None
                 _bg_list_cache = None
-        
+
         if has_enabled_phases:
             raw = data.get('enabledPhases')
             if not isinstance(raw, list):
                 raise ValueError('enabledPhases doit être une liste de phases')
             cleaned = {str(p).strip().lower().replace('-', '_') for p in raw}
-            invalid = cleaned - VALID_PHASES
+            invalid = cleaned - AUTO_ADVANCE_PHASES
             if invalid:
-                raise ValueError(f'enabledPhases invalide(s): {sorted(invalid)} (attendu: {sorted(VALID_PHASES)})')
+                raise ValueError(
+                    f'enabledPhases invalide(s): {sorted(invalid)} (attendu: {sorted(AUTO_ADVANCE_PHASES)} — '
+                    "« clip » est manuel uniquement, jamais dans le cycle auto)"
+                )
             if not cleaned:
                 raise ValueError('enabledPhases ne peut pas être vide (au moins une phase active)')
             _enabled_phases = cleaned

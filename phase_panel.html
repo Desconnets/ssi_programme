@@ -112,8 +112,27 @@
       gap: 0.35rem;
     }
 
+    /* Phase with no "active in auto" checkbox (e.g. Clip): badge instead, same width as the checkbox */
+    .panel-manual-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1rem;
+      font-size: 0.85rem;
+      opacity: 0.75;
+    }
+
+    /* Sets manual-only phases (e.g. Clip) apart from the auto-cycle phases above */
+    .panel-actions-separator {
+      width: 100%;
+      border: none;
+      border-top: var(--panel-border);
+      margin: 0.4rem 0;
+    }
+
     #panelVideoSelect,
-    #panelBgSelect {
+    #panelBgSelect,
+    #panelClipSelect {
       flex: 1;
       min-width: min(100%, 12rem);
       padding: 0.45rem 0.5rem;
@@ -408,6 +427,18 @@
           <input type="checkbox" id="panelVideoMuted" checked />
           🔇 Muet (décocher pour activer le son de la vidéo)
         </label>
+      </section>
+
+      <section class="panel-section" aria-labelledby="lbl-clip">
+        <h2 id="lbl-clip">Vidéo (phase Clip — son toujours actif)</h2>
+        <p class="panel-field-hint">
+          Phase manuelle uniquement (jamais dans le cycle auto) · fichiers depuis <code>clips/</code> · aucun
+          sticker/titre superposé pendant la lecture.
+        </p>
+        <div class="panel-toolbar">
+          <label for="panelClipSelect" class="sr-only">Choisir le clip</label>
+          <select id="panelClipSelect" aria-label="Clips"></select>
+        </div>
       </section>
 
       <section class="panel-section" aria-labelledby="lbl-bg">

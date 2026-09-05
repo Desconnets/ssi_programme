@@ -24,6 +24,7 @@ const FALLBACK_PANEL_PHASES = [
   { id: 'logo', label: 'Logo', needsVideoIndex: false, hint: '' },
   { id: 'webcam', label: 'Webcam', needsVideoIndex: false, hint: '' },
   { id: "text", label: "Texte", needsVideoIndex: false, hint: "" },
+  { id: 'clip', label: 'Clip (avec son)', needsVideoIndex: false, needsClipIndex: true, manualOnly: true, hint: '' },
 ];
 
 function timeShort() {
@@ -105,14 +106,15 @@ async function postPhase(phase, videoIndex, textContent) {
 /**
  * @param {HTMLSelectElement} select
  * @param {string[]} files
+ * @param {string} [emptyLabel]
  */
-function fillVideoSelect(select, files) {
+function fillVideoSelect(select, files, emptyLabel = '(aucune vidéo dans phase_videos/)') {
   const prev = select.value;
   select.replaceChildren();
   if (!files.length) {
     const opt = document.createElement('option');
     opt.value = '0';
-    opt.textContent = '(aucune vidéo dans phase_videos/)';
+    opt.textContent = emptyLabel;
     select.appendChild(opt);
     select.disabled = true;
     return;
@@ -167,15 +169,35 @@ function fillBackgroundSelect(select, files) {
  */
 function renderPhaseButtons(container, phases, onPhase, enabledIds, onToggleEnabled) {
    container.replaceChildren();
+  let prevManualOnly = false;
   for (const p of phases) {
+    /* Visual break before the first manual-only phase (e.g. Clip): sets it apart from
+       the auto-cycle phases above, so it doesn't read as "just another phase". */
+    if (p.manualOnly && !prevManualOnly) {
+      const sep = document.createElement('hr');
+      sep.className = 'panel-actions-separator';
+      container.appendChild(sep);
+    }
+    prevManualOnly = Boolean(p.manualOnly);
+
     const row = document.createElement('div');
     row.className = 'panel-row';
 
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = enabledIds.has(p.id);
-    cb.title = 'Active dans le cycle automatique (séquentiel / aléatoire)';
-    cb.addEventListener('change', () => onToggleEnabled(p.id, cb.checked, cb));
+    if (p.manualOnly) {
+      /* Never in the auto cycle (e.g. Clip): no checkbox, just a visual marker. */
+      const badge = document.createElement('span');
+      badge.className = 'panel-manual-badge';
+      badge.textContent = '✋';
+      badge.title = 'Phase manuelle uniquement — jamais dans le cycle auto';
+      row.appendChild(badge);
+    } else {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = enabledIds.has(p.id);
+      cb.title = 'Active dans le cycle automatique (séquentiel / aléatoire)';
+      cb.addEventListener('change', () => onToggleEnabled(p.id, cb.checked, cb));
+      row.appendChild(cb);
+    }
 
     const b = document.createElement('button');
     b.type = 'button';
@@ -186,7 +208,7 @@ function renderPhaseButtons(container, phases, onPhase, enabledIds, onToggleEnab
     b.style.flex = '1';
     b.addEventListener('click', () => onPhase(p));
 
-    row.append(cb, b);
+    row.appendChild(b);
     container.appendChild(row);
   }
 }
@@ -200,6 +222,7 @@ async function bootstrap() {
   const logEl = document.getElementById('panelLog');
   const actionsEl = document.getElementById('panelActions');
   const videoSelect = /** @type {HTMLSelectElement} */ (document.getElementById('panelVideoSelect'));
+  const clipSelect = /** @type {HTMLSelectElement} */ (document.getElementById('panelClipSelect'));
   const bgSelect = /** @type {HTMLSelectElement} */ (document.getElementById('panelBgSelect'));
   const bgOpacity = /** @type {HTMLInputElement} */ (document.getElementById('panelBgOpacity'));
   const bgOpacityVal = document.getElementById('panelBgOpacityVal');
@@ -230,6 +253,7 @@ async function bootstrap() {
     !logEl ||
     !actionsEl ||
     !videoSelect ||
+    !clipSelect ||
     !bgSelect ||
     !bgOpacity ||
     !bgOpacityVal ||
@@ -269,7 +293,9 @@ async function bootstrap() {
   syncOpacityLabel();
 
   const runPhase = async (p) => {
-    const vi = p.needsVideoIndex ? getSelectedVideoIndex(videoSelect) : null;
+    let vi = null;
+    if (p.needsVideoIndex) vi = getSelectedVideoIndex(videoSelect);
+    else if (p.needsClipIndex) vi = getSelectedVideoIndex(clipSelect);
     const textContent = textEditorContent;
     log.append('cmd', `${p.label} (${p.id})`, vi != null ? `vidéo #${vi}` : '');
     try {
@@ -310,6 +336,7 @@ async function bootstrap() {
       renderPhaseButtons(actionsEl, phases, runPhase, new Set(Array.isArray(j.enabledPhases) ? j.enabledPhases : phases.map((p) => p.id)), onToggleEnabled)
 
       fillVideoSelect(videoSelect, j.phaseVideoFiles || []);
+      fillVideoSelect(clipSelect, j.clipVideoFiles || [], '(aucun fichier dans clips/)');
       const bgFiles = j.backgroundVideoFiles || [];
       fillBackgroundSelect(bgSelect, bgFiles);
 
@@ -366,7 +393,7 @@ async function bootstrap() {
       log.append(
         'info',
         'Synchronisation API',
-        `${phases.length} action(s), phase_videos ${j.phaseVideoCount ?? 0}, backgrounds ${j.backgroundVideoCount ?? 0}`,
+        `${phases.length} action(s), phase_videos ${j.phaseVideoCount ?? 0}, backgrounds ${j.backgroundVideoCount ?? 0}, clips ${j.clipVideoCount ?? 0}`,
       );
     } catch (e) {
       const m = e && e.message ? e.message : String(e);

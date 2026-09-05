@@ -53,6 +53,14 @@ export const PHASE_REMOTE_IDLE_RESUME_MS = 60000;
 export const TEXT_PHASE_DURATION_MS = 20000;
 
 /**
+ * Clip phase — manual trigger only (never in the auto cycle), full-frame video with
+ * audio active, no sticker / title overlay. Plays until the video's natural end (or
+ * until another phase is selected) — no max-duration timer.
+ */
+/** CSS duration / animated close timeout (fade) */
+export const CLIP_PHASE_OPEN_CLOSE_MS = 420;
+
+/**
  * Au chargement de la page : remplir le cache HTTP du navigateur (fetch + blob), **en file d’attente**
  * pour ne pas saturer disque/réseau tout en remplissant le cache (serveur HTTP threadé).
  * Voir aussi côté serveur : `SSI_HTTP_MEDIA_LOG=1` pour voir la durée de chaque GET média.

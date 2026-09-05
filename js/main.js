@@ -9,6 +9,7 @@ import * as audio from './audio.js';
 import {
   initStickers,
   initPhaseVideos,
+  initClipVideos,
   getStickerLiveInfo,
   requestWebcamPermissionEarly,
   startVisualCycleOnFirstClick,
@@ -83,9 +84,10 @@ function refreshLiveStatusBanner(opts = {}) {
   const rootEl = document.documentElement;
   rootEl.classList.add('ssi-app-init-pending');
   try {
-    const { stickerUrls, backgroundUrls, phaseVideoUrls } = await loadFromServer();
+    const { stickerUrls, backgroundUrls, phaseVideoUrls, clipUrls } = await loadFromServer();
 
     initPhaseVideos(phaseVideoUrls);
+    initClipVideos(clipUrls);
     initStickers(stickerUrls);
 
     warmBrowserMediaCache({
