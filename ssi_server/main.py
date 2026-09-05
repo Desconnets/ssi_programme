@@ -7,7 +7,7 @@ import time
 from http.server import ThreadingHTTPServer
 
 from .config import ROOT_DIR, PORT
-from .phase_video_convert import safe_convert_backgrounds_lite, safe_convert_phase_videos_lite
+from .phase_video_convert import safe_convert_backgrounds_lite, safe_convert_clips_lite, safe_convert_phase_videos_lite
 from .handler import AppRequestHandler
 from .live_report import print_startup_inventory
 from .logutil import boot, boot_reset, info, pulse, sep, warn
@@ -143,6 +143,11 @@ def main() -> None:
     t3 = time.perf_counter()
     safe_convert_backgrounds_lite()
     boot(f'Bloc backgrounds/ terminé (durée de ce bloc : {time.perf_counter() - t3:.1f}s)')
+
+    info('Conversion clips/ → MP4 léger (archive _archive/, audio conservé — phase Clip)…')
+    t4 = time.perf_counter()
+    safe_convert_clips_lite()
+    boot(f'Bloc clips/ terminé (durée de ce bloc : {time.perf_counter() - t4:.1f}s)')
 
     boot('Inventaire fichiers (scan rapide des dossiers)…')
     print_startup_inventory()

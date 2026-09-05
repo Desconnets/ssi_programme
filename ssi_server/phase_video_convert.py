@@ -15,6 +15,7 @@ from .normalize import find_ffmpeg, try_install_ffmpeg
 
 PHASE_DIR = 'phase_videos'
 BACKGROUNDS_DIR = 'backgrounds'
+CLIPS_DIR = 'clips'
 ARCHIVE_SUBDIR = '_archive'
 OK_TAG = 'ok_converti'
 
@@ -308,6 +309,15 @@ def convert_backgrounds_lite() -> None:
     _convert_content_dir('backgrounds')
 
 
+def convert_clips_lite() -> None:
+    """
+    Clip phase (audio active): same lightweight export as phase_videos, audio kept.
+    Flat folder only — no theme subfolders or content/{mood}/clips/
+    (unlike phase_videos/backgrounds, the Clip phase does not follow the mood logic).
+    """
+    _convert_directory_lite(CLIPS_DIR)
+
+
 def safe_convert_phase_videos_lite() -> None:
     try:
         convert_phase_videos_lite()
@@ -320,3 +330,10 @@ def safe_convert_backgrounds_lite() -> None:
         convert_backgrounds_lite()
     except Exception as e:
         warn(f'Erreur globale conversion backgrounds : {e}')
+
+
+def safe_convert_clips_lite() -> None:
+    try:
+        convert_clips_lite()
+    except Exception as e:
+        warn(f'Erreur globale conversion clips : {e}')

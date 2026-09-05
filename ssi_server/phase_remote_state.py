@@ -30,6 +30,7 @@ _phase: str | None = None
 _video_index: int | None = None
 # Incrémenté seulement si le POST contient « phase » — pour que la page ne relance pas la phase à chaque POST fond.
 _phase_command_seq = 0
+_text_content: str | None = None
 
 # Fond scène (dégradé + vidéos backgrounds/)
 _bg_gradient_opacity: float | None = None
@@ -57,11 +58,15 @@ _phases_paused: bool = False
 # Son des vidéos phase_videos/ — muet par défaut, activable depuis la télécommande
 _video_muted: bool = True
 
-VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam'})
+VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam', 'text', 'clip'})
 
 # Phases proposées par la sélection automatique (séquentielle ou aléatoire).
 # Désactiver une phase ne l'empêche pas d'être déclenchée manuellement.
-_enabled_phases: set[str] = set(VALID_PHASES)
+# "clip" is deliberately excluded: manual-only phase (see dedicated user story),
+# never picked by the auto cycle — even if a client tries to add it to enabledPhases
+# (rejected in post_remote_payload below).
+AUTO_ADVANCE_PHASES: frozenset[str] = VALID_PHASES - frozenset({'clip'})
+_enabled_phases: set[str] = set(AUTO_ADVANCE_PHASES)
 
 VALID_PHASE_SELECT_MODES = frozenset({'sequential', 'random'})
 _phase_select_mode: str = 'sequential'
@@ -72,7 +77,9 @@ PANEL_PHASE_ORDER: tuple[str, ...] = (
     'super_boom',
     'os_video',
     'logo',
+    'text',
     'webcam',
+    'clip',
 )
 
 PANEL_PHASE_LABELS: dict[str, str] = {
@@ -81,10 +88,14 @@ PANEL_PHASE_LABELS: dict[str, str] = {
     'os_video': 'Fenêtre vidéo',
     'logo': 'Logo',
     'webcam': 'Webcam',
+    'text': 'Texte',
+    'clip': 'Clip (avec son)',
 }
 
 # Indice vidéo obligatoire pour cette phase (extensible si d’autres phases en ont besoin).
 PANEL_PHASE_NEEDS_VIDEO: frozenset[str] = frozenset({'os_video'})
+# Same idea, but for the clips/ list (distinct from phase_videos/) — see /api/clips.
+PANEL_PHASE_NEEDS_CLIP_INDEX: frozenset[str] = frozenset({'clip'})
 
 
 def panel_phase_definitions() -> list[dict[str, Any]]:
@@ -101,6 +112,9 @@ def panel_phase_definitions() -> list[dict[str, Any]]:
                 'id': pid,
                 'label': PANEL_PHASE_LABELS.get(pid, pid),
                 'needsVideoIndex': pid in PANEL_PHASE_NEEDS_VIDEO,
+                'needsClipIndex': pid in PANEL_PHASE_NEEDS_CLIP_INDEX,
+                # Phase absent from the auto cycle: the panel shouldn't offer an "active in auto" checkbox.
+                'manualOnly': pid not in AUTO_ADVANCE_PHASES,
                 'hint': '',
             }
         )
@@ -114,6 +128,10 @@ _pv_list_cache: tuple[str, float, list[str]] | None = None  # (theme, expiry, fi
 # Liste backgrounds/ : même idée
 _bg_list_lock = threading.Lock()
 _bg_list_cache: tuple[str, float, list[str]] | None = None  # (theme, expiry, files)
+
+# clips/ list (Clip phase, audio active): flat folder, no mood/content set → no theme key.
+_clip_list_lock = threading.Lock()
+_clip_list_cache: tuple[float, list[str]] | None = None  # (expiry, files)
 
 
 def _phase_video_list_ttl_sec() -> float:
@@ -172,6 +190,28 @@ def get_cached_background_filenames() -> list[str]:
         return files
 
 
+def get_cached_clip_filenames() -> list[str]:
+    """
+    Files from the flat clips/ folder (short TTL, thread-safe). Unlike phase_videos/
+    and backgrounds/, the Clip phase does not follow the mood/content-set logic: no
+    per-theme subfolders, a single file pool regardless of the active mood.
+    """
+    from .config import VIDEO_EXT
+    from .fsutil import list_files
+
+    global _clip_list_cache
+    now = time.monotonic()
+    ttl = _phase_video_list_ttl_sec()
+    with _clip_list_lock:
+        if _clip_list_cache is not None:
+            exp, files = _clip_list_cache
+            if now < exp:
+                return files
+        files = [f'clips/{f}' for f in list_files('clips', VIDEO_EXT)]
+        _clip_list_cache = (now + ttl, files)
+        return files
+
+
 def _snapshot_unlocked() -> dict[str, Any]:
     return {
         'seq': _seq,
@@ -190,6 +230,7 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'phaseAutoAdvance': _phases_auto_advance,
         'enabledPhases': [p for p in PANEL_PHASE_ORDER if p in _enabled_phases],
         'phaseSelectMode': _phase_select_mode,
+        'textContent': _text_content,
     }
 
 
@@ -216,6 +257,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
     global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set, _phases_auto_advance
     global _enabled_phases, _phase_select_mode
+    global _text_content
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -233,14 +275,16 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_content_set = 'contentSet' in data
     has_enabled_phases = 'enabledPhases' in data
     has_select_mode = 'phaseSelectMode' in data
+    has_text = 'textContent' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
             and not has_idle_resume and not has_theme and not has_pause \
             and not has_auto_advance and not has_enabled_phases and not has_select_mode \
+            and not has_text \
             and not has_video_muted and not has_content_set:
         raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, enabledPhases, phaseSelectMode'
-            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet'
+            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet, textContent'
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
@@ -305,7 +349,8 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
                 raise ValueError(f'mood invalide: {t!r} (valeurs: {sorted(VALID_MOODS)})')
             if t != _theme:
                 _theme = t
-                # Invalider les caches de listes médias pour forcer un re-scan
+                # Invalidate media list caches to force a re-scan
+                # (clips/ is not part of this: flat folder, no mood/content-set logic)
                 _pv_list_cache = None
                 _bg_list_cache = None
 
@@ -314,9 +359,12 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
             if not isinstance(raw, list):
                 raise ValueError('enabledPhases doit être une liste de phases')
             cleaned = {str(p).strip().lower().replace('-', '_') for p in raw}
-            invalid = cleaned - VALID_PHASES
+            invalid = cleaned - AUTO_ADVANCE_PHASES
             if invalid:
-                raise ValueError(f'enabledPhases invalide(s): {sorted(invalid)} (attendu: {sorted(VALID_PHASES)})')
+                raise ValueError(
+                    f'enabledPhases invalide(s): {sorted(invalid)} (attendu: {sorted(AUTO_ADVANCE_PHASES)} — '
+                    "« clip » est manuel uniquement, jamais dans le cycle auto)"
+                )
             if not cleaned:
                 raise ValueError('enabledPhases ne peut pas être vide (au moins une phase active)')
             _enabled_phases = cleaned
@@ -336,6 +384,10 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
         if has_video_muted:
             _video_muted = bool(data.get('videoMuted'))
 
+        if has_text:
+            tc = data.get('textContent')
+            _text_content = str(tc) if tc is not None else ''
+
         if has_content_set:
             cs = str(data.get('contentSet') or '')
             if cs != _content_set:
@@ -349,9 +401,11 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
         return _snapshot_unlocked().copy()
 
 
-def post_command(phase: str, video_index: int | None = None) -> dict[str, Any]:
-    """Compatibilité interne : équivalent à POST { phase, videoIndex? }."""
+def post_command(phase: str, video_index: int | None = None, text_content: str | None = None) -> dict[str, Any]:
+    """Internal compatibility helper: equivalent to POST { phase, videoIndex?, textContent? }."""
     payload: dict[str, Any] = {'phase': phase}
     if video_index is not None:
         payload['videoIndex'] = video_index
+    if text_content is not None:
+            payload['textContent'] = text_content
     return post_remote_payload(payload)

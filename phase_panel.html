@@ -112,8 +112,27 @@
       gap: 0.35rem;
     }
 
+    /* Phase with no "active in auto" checkbox (e.g. Clip): badge instead, same width as the checkbox */
+    .panel-manual-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 1rem;
+      font-size: 0.85rem;
+      opacity: 0.75;
+    }
+
+    /* Sets manual-only phases (e.g. Clip) apart from the auto-cycle phases above */
+    .panel-actions-separator {
+      width: 100%;
+      border: none;
+      border-top: var(--panel-border);
+      margin: 0.4rem 0;
+    }
+
     #panelVideoSelect,
-    #panelBgSelect {
+    #panelBgSelect,
+    #panelClipSelect {
       flex: 1;
       min-width: min(100%, 12rem);
       padding: 0.45rem 0.5rem;
@@ -359,6 +378,30 @@
       <section class="panel-section" aria-labelledby="lbl-actions">
         <h2 id="lbl-actions">Actions</h2>
         <div id="panelActions"></div>
+         <div class="panel-field" style="margin-top: 0.5rem">
+            <label for="text-editor">Message (phase Texte)</label>
+            <textarea
+              id="text-editor"
+              rows="4"
+              placeholder="Entrez un message…"
+              style="
+                width: 100%;
+                padding: 0.4rem 0.5rem;
+                font-size: 0.9rem;
+                border-radius: 6px;
+                border: 1px solid #888;
+                font-family: inherit;
+                resize: vertical;
+              "
+            ></textarea>
+            <label class="panel-check" style="margin-top: 0.5rem">
+              <input type="checkbox" id="panelTextLiveUpdate" />
+              Mise à jour en direct (à chaque frappe)
+            </label>
+            <button type="button" class="secondary" id="btnUpdateTextContent" style="margin-top: 0.5rem; width: 100%">
+              Mettre à jour le texte affiché
+            </button>
+          </div>
       </section>
 
       <section class="panel-section" aria-labelledby="lbl-idle">
@@ -384,6 +427,18 @@
           <input type="checkbox" id="panelVideoMuted" checked />
           🔇 Muet (décocher pour activer le son de la vidéo)
         </label>
+      </section>
+
+      <section class="panel-section" aria-labelledby="lbl-clip">
+        <h2 id="lbl-clip">Vidéo (phase Clip — son toujours actif)</h2>
+        <p class="panel-field-hint">
+          Phase manuelle uniquement (jamais dans le cycle auto) · fichiers depuis <code>clips/</code> · aucun
+          sticker/titre superposé pendant la lecture.
+        </p>
+        <div class="panel-toolbar">
+          <label for="panelClipSelect" class="sr-only">Choisir le clip</label>
+          <select id="panelClipSelect" aria-label="Clips"></select>
+        </div>
       </section>
 
       <section class="panel-section" aria-labelledby="lbl-bg">
@@ -435,6 +490,7 @@
       <strong>Étroit</strong> : colonnes empilées (actions puis journal). <strong>≥ 640px</strong> : commandes à gauche, journal à droite.
     </p>
   </div>
+
 
   <script type="module" src="js/phase-panel-app.js"></script>
 </body>

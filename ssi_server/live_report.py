@@ -1,6 +1,7 @@
 """Résumé des fichiers exposés au démarrage (aperçu LIVE)."""
 import os
 from .config import AUDIO_EXT, IMAGE_EXT, VIDEO_EXT
+from .fsutil import list_files
 from .logutil import info, warn, sep
 
 
@@ -55,14 +56,17 @@ def print_startup_inventory() -> dict:
         'stickers':     _count_content_files('stickers', IMAGE_EXT),
         'backgrounds':  _count_content_files('backgrounds', VIDEO_EXT),
         'phase_videos': _count_content_files('videos', VIDEO_EXT),
+        # Flat folder, no mood/content-set logic (unlike the other media above).
+        'clips':        len(list_files('clips', VIDEO_EXT)),
     }
 
     sep()
     info('PRÊT LIVE — inventaire fichiers (dossier content/)')
     sep()
-    info(f'  Stickers      → {counts["stickers"]:3d} fichier(s)   (content/{{mood}}/{{cat}}/stickers/ + logos/)')
-    info(f'  Fonds vidéo   → {counts["backgrounds"]:3d} fichier(s)   (content/{{mood}}/{{cat}}/backgrounds/)')
-    info(f'  Phase fenêtre → {counts["phase_videos"]:3d} fichier(s)   (content/{{mood}}/{{cat}}/videos/)')
+    info(f'  Stickers      → {counts["stickers"]:3d} fichier(s)   (content/*/stickers/ + content/logos/)')
+    info(f'  Fonds vidéo   → {counts["backgrounds"]:3d} fichier(s)   (content/*/backgrounds/)')
+    info(f'  Phase fenêtre → {counts["phase_videos"]:3d} fichier(s)   (content/*/videos/)')
+    info(f'  Phase Clip    → {counts["clips"]:3d} fichier(s)   (clips/) — manuel, son actif')
     sep()
 
     info('Mode audio : micro — le micro du navigateur pilote les effets visuels.')
@@ -82,6 +86,13 @@ def print_startup_inventory() -> dict:
     if counts['backgrounds'] > 0:
         info(
             'backgrounds/ : même logique de conversion (MP4 ok_converti, originaux dans _archive/).'
+        )
+    if counts['clips'] == 0:
+        info('Aucun clip : le bouton « Clip » du panneau restera sans effet tant que clips/ est vide.')
+    else:
+        info(
+            'clips/ : même logique de conversion, audio conservé — phase déclenchée manuellement '
+            'uniquement (jamais dans le cycle auto).'
         )
 
     info('Les requêtes API sont loguées ci-dessous ; les gros fichiers (MP4) restent silencieux.')

@@ -20,6 +20,7 @@ import {
 } from './phases.js';
 import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
+import { updateTextContent } from './text-phase.js';
 
 const ENDPOINT = '/api/phase-remote';
 
@@ -61,6 +62,8 @@ export function startPhaseRemotePolling() {
   let lastAppliedSelectMode = null;
   /** État mute vidéo appliqué sur la page scène. */
   let lastAppliedVideoMuted = null;
+  /** Last text applied to the DOM (independent of phase restarts). */
+  let lastAppliedTextContent = null;
   /** @type {AbortController | null} */
   let abortCtl = null;
   let timeoutId = 0;
@@ -88,8 +91,15 @@ export function startPhaseRemotePolling() {
           lastAppliedPhaseCommandSeq = pcs;
           const ph = data.phase;
           if (ph) {
-            startPhase(ph, { videoIndex: data.videoIndex });
+            startPhase(ph, { videoIndex: data.videoIndex, textContent: data.textContent });
           }
+        }
+
+        /* Update the displayed text without restarting the phase (e.g. live editing). */
+        const newTextContent = typeof data.textContent === 'string' ? data.textContent : '';
+        if (newTextContent !== lastAppliedTextContent) {
+          lastAppliedTextContent = newTextContent;
+          updateTextContent(newTextContent);
         }
       }
 
@@ -139,7 +149,9 @@ export function startPhaseRemotePolling() {
         setOsWindowMinLoopMs(newTheme === 'dark' ? OS_WINDOW_DIAGONAL_MIN_LOOP_MS : 0);
       }
 
-      /* Recharger les médias si mood OU content set a changé */
+      /* Reload media if mood OR content set changed.
+         clips/ is not part of this: flat folder, no mood/content-set logic (loaded once
+         on startup — see main.js). */
       if (themeChanged || contentSetChanged) {
         lastAppliedContentSet = newContentSet;
         try {

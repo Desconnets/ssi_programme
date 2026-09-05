@@ -9,6 +9,13 @@
  */
 const API = '/api/phase-remote';
 
+let textEditorContent = "";
+let liveUpdateEnabled = false;
+let liveUpdateTimer = null;
+/** Set by bootstrap(): sends textEditorContent to the server (debounced in live mode). */
+let scheduleLiveTextUpdate = null;
+const LIVE_UPDATE_DEBOUNCE_MS = 400;
+
 /** Si le serveur est plus vieux que le panneau. */
 const FALLBACK_PANEL_PHASES = [
   { id: 'snake', label: 'Snake', needsVideoIndex: false, hint: '' },
@@ -16,6 +23,8 @@ const FALLBACK_PANEL_PHASES = [
   { id: 'os_video', label: 'Fenêtre vidéo', needsVideoIndex: true, hint: '' },
   { id: 'logo', label: 'Logo', needsVideoIndex: false, hint: '' },
   { id: 'webcam', label: 'Webcam', needsVideoIndex: false, hint: '' },
+  { id: "text", label: "Texte", needsVideoIndex: false, hint: "" },
+  { id: 'clip', label: 'Clip (avec son)', needsVideoIndex: false, needsClipIndex: true, manualOnly: true, hint: '' },
 ];
 
 function timeShort() {
@@ -83,10 +92,13 @@ async function postRemote(body) {
  * @param {string} phase
  * @param {number | null | undefined} videoIndex
  */
-async function postPhase(phase, videoIndex) {
+async function postPhase(phase, videoIndex, textContent) {
   const body = { phase };
   if (videoIndex != null && Number.isFinite(videoIndex)) {
     body.videoIndex = videoIndex;
+  }
+  if (textContent != null) {
+    body.textContent = textContent;
   }
   return postRemote(body);
 }
@@ -94,14 +106,15 @@ async function postPhase(phase, videoIndex) {
 /**
  * @param {HTMLSelectElement} select
  * @param {string[]} files
+ * @param {string} [emptyLabel]
  */
-function fillVideoSelect(select, files) {
+function fillVideoSelect(select, files, emptyLabel = '(aucune vidéo dans phase_videos/)') {
   const prev = select.value;
   select.replaceChildren();
   if (!files.length) {
     const opt = document.createElement('option');
     opt.value = '0';
-    opt.textContent = '(aucune vidéo dans phase_videos/)';
+    opt.textContent = emptyLabel;
     select.appendChild(opt);
     select.disabled = true;
     return;
@@ -155,16 +168,37 @@ function fillBackgroundSelect(select, files) {
  * @param {(meta: { id: string, label: string, needsVideoIndex?: boolean }) => void} onPhase
  */
 function renderPhaseButtons(container, phases, onPhase, enabledIds, onToggleEnabled) {
-  container.replaceChildren();
+   container.replaceChildren();
+  let prevManualOnly = false;
   for (const p of phases) {
+    /* Visual break before the first manual-only phase (e.g. Clip): sets it apart from
+       the auto-cycle phases above, so it doesn't read as "just another phase". */
+    if (p.manualOnly && !prevManualOnly) {
+      const sep = document.createElement('hr');
+      sep.className = 'panel-actions-separator';
+      container.appendChild(sep);
+    }
+    prevManualOnly = Boolean(p.manualOnly);
+
     const row = document.createElement('div');
     row.className = 'panel-row';
 
-    const cb = document.createElement('input');
-    cb.type = 'checkbox';
-    cb.checked = enabledIds.has(p.id);
-    cb.title = 'Active dans le cycle automatique (séquentiel / aléatoire)';
-    cb.addEventListener('change', () => onToggleEnabled(p.id, cb.checked, cb));
+    if (p.manualOnly) {
+      /* Never in the auto cycle (e.g. Clip): no checkbox, just a visual marker. */
+      const badge = document.createElement('span');
+      badge.className = 'panel-manual-badge';
+      badge.textContent = '✋';
+      badge.title = 'Phase manuelle uniquement — jamais dans le cycle auto';
+      row.appendChild(badge);
+    } else {
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = enabledIds.has(p.id);
+      cb.title = 'Active dans le cycle automatique (séquentiel / aléatoire)';
+      cb.addEventListener('change', () => onToggleEnabled(p.id, cb.checked, cb));
+      row.appendChild(cb);
+    }
+
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'panel-action-btn';
@@ -173,8 +207,9 @@ function renderPhaseButtons(container, phases, onPhase, enabledIds, onToggleEnab
     if (p.hint) b.title = p.hint;
     b.style.flex = '1';
     b.addEventListener('click', () => onPhase(p));
-    row.append(cb, b);
-    container.appendChild(b);
+
+    row.appendChild(b);
+    container.appendChild(row);
   }
 }
 
@@ -187,6 +222,7 @@ async function bootstrap() {
   const logEl = document.getElementById('panelLog');
   const actionsEl = document.getElementById('panelActions');
   const videoSelect = /** @type {HTMLSelectElement} */ (document.getElementById('panelVideoSelect'));
+  const clipSelect = /** @type {HTMLSelectElement} */ (document.getElementById('panelClipSelect'));
   const bgSelect = /** @type {HTMLSelectElement} */ (document.getElementById('panelBgSelect'));
   const bgOpacity = /** @type {HTMLInputElement} */ (document.getElementById('panelBgOpacity'));
   const bgOpacityVal = document.getElementById('panelBgOpacityVal');
@@ -209,11 +245,15 @@ async function bootstrap() {
   const btnAutoAdvanceManual = document.getElementById('btnAutoAdvanceManual');
   const btnPhaseSelectModeSeq = document.getElementById('btnPhaseSelectModeSeq');
   const btnPhaseSelectModeRandom = document.getElementById('btnPhaseSelectModeRandom');
+  const textEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById('text-editor'));
+  const btnUpdateTextContent = document.getElementById('btnUpdateTextContent');
+  const textLiveUpdateCheck = /** @type {HTMLInputElement} */ (document.getElementById('panelTextLiveUpdate'));
 
   if (
     !logEl ||
     !actionsEl ||
     !videoSelect ||
+    !clipSelect ||
     !bgSelect ||
     !bgOpacity ||
     !bgOpacityVal ||
@@ -235,7 +275,10 @@ async function bootstrap() {
     !btnAutoAdvanceManual ||
     !btnPhaseSelectModeSeq ||
     !btnPhaseSelectModeRandom ||
-    !btnContentSetNone
+    !btnContentSetNone ||
+    !textEditor ||
+    !btnUpdateTextContent ||
+    !textLiveUpdateCheck
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -250,10 +293,13 @@ async function bootstrap() {
   syncOpacityLabel();
 
   const runPhase = async (p) => {
-    const vi = p.needsVideoIndex ? getSelectedVideoIndex(videoSelect) : null;
+    let vi = null;
+    if (p.needsVideoIndex) vi = getSelectedVideoIndex(videoSelect);
+    else if (p.needsClipIndex) vi = getSelectedVideoIndex(clipSelect);
+    const textContent = textEditorContent;
     log.append('cmd', `${p.label} (${p.id})`, vi != null ? `vidéo #${vi}` : '');
     try {
-      const res = await postPhase(p.id, vi);
+      const res = await postPhase(p.id, vi, textContent);
       if (res.ok && res.json) {
         log.append('ok', `serveur seq=${res.json.seq}`, String(res.json.phase || ''));
         statusLine.textContent = `seq=${res.json.seq} · phase=${res.json.phase ?? '?'}`;
@@ -290,6 +336,7 @@ async function bootstrap() {
       renderPhaseButtons(actionsEl, phases, runPhase, new Set(Array.isArray(j.enabledPhases) ? j.enabledPhases : phases.map((p) => p.id)), onToggleEnabled)
 
       fillVideoSelect(videoSelect, j.phaseVideoFiles || []);
+      fillVideoSelect(clipSelect, j.clipVideoFiles || [], '(aucun fichier dans clips/)');
       const bgFiles = j.backgroundVideoFiles || [];
       fillBackgroundSelect(bgSelect, bgFiles);
 
@@ -346,7 +393,7 @@ async function bootstrap() {
       log.append(
         'info',
         'Synchronisation API',
-        `${phases.length} action(s), phase_videos ${j.phaseVideoCount ?? 0}, backgrounds ${j.backgroundVideoCount ?? 0}`,
+        `${phases.length} action(s), phase_videos ${j.phaseVideoCount ?? 0}, backgrounds ${j.backgroundVideoCount ?? 0}, clips ${j.clipVideoCount ?? 0}`,
       );
     } catch (e) {
       const m = e && e.message ? e.message : String(e);
@@ -463,6 +510,39 @@ async function bootstrap() {
       statusLine.textContent = m;
     }
   };
+
+  const sendTextContentUpdate = async () => {
+    log.append('cmd', 'Mise à jour texte', textEditorContent.slice(0, 60));
+    try {
+      const res = await postRemote({ textContent: textEditorContent });
+      logRemoteResult('POST texte', res);
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST texte', m);
+      statusLine.textContent = m;
+    }
+  };
+
+  scheduleLiveTextUpdate = () => {
+    clearTimeout(liveUpdateTimer);
+    liveUpdateTimer = setTimeout(sendTextContentUpdate, LIVE_UPDATE_DEBOUNCE_MS);
+  };
+
+  textEditor.addEventListener('input', () => {
+    textEditorContent = textEditor.value;
+    if (liveUpdateEnabled) scheduleLiveTextUpdate();
+  });
+
+  btnUpdateTextContent.addEventListener('click', () => {
+    clearTimeout(liveUpdateTimer);
+    void sendTextContentUpdate();
+  });
+
+  textLiveUpdateCheck.addEventListener('change', () => {
+    liveUpdateEnabled = textLiveUpdateCheck.checked;
+    log.append('info', liveUpdateEnabled ? 'Mise à jour en direct activée' : 'Mise à jour en direct désactivée');
+    if (liveUpdateEnabled) scheduleLiveTextUpdate();
+  });
 
   videoMutedCheck.addEventListener('change', async () => {
     const muted = videoMutedCheck.checked;
