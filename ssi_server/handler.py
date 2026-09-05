@@ -45,6 +45,7 @@ def _ssi_is_heavy_static_path(path_only: str) -> bool:
         p.startswith('/content/')
         or p.startswith('/backgrounds/')
         or p.startswith('/phase_videos/')
+        or p.startswith('/clips/')
     )
 
 
@@ -56,12 +57,14 @@ _QUIET_OK_PATTERNS = tuple(
         r'^/stickers/',
         r'^/backgrounds/',
         r'^/phase_videos/',
+        r'^/clips/',
         r'^/js/',
         r'^/favicon\.ico$',
         r'^/style\.css$',
         r'^/index\.html$',
         r'^/phase_panel\.html$',
         r'^/api/phase-videos$',
+        r'^/api/clips$',
         r'^/api/phase-remote$',
     )
 )
@@ -115,6 +118,9 @@ _LIVE_EVENTS: dict = {
     'logo':               lambda d: live(f'Logo ▶ « {d.get("fichier","?")} »'),
     'webcam_phase':       lambda d: live('Webcam ▶ phase signal direct (VHS)'),
     'webcam_phase_skip':  lambda d: live(f'! Webcam — skip phase → {d.get("reason","?")}'),
+    'clip':               lambda d: live(f'Clip ▶ « {d.get("fichier","?")} » (son actif)'),
+    'clip_skip':          lambda d: live(f'! Clip — skip phase → {d.get("reason","?")}'),
+    'clip_fail':          lambda d: live(f'! Clip — échec lecture → « {d.get("fichier","?")} »'),
     'sticker_fail':       lambda d: live(f'! Sticker non chargé → fallback SVG : « {d.get("fichier","?")} »'),
     'video_ready':        lambda d: live(f'Vidéo PRÊTE [{d.get("role","?")}] '
                                          f'« {d.get("file","?")} » ({d.get("via","?")}) @ {d.get("tIso","")}'),
@@ -202,6 +208,13 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
             api(f'GET /api/phase-videos → {len(paths)} vidéo(s) phase fenêtre [cs={cs or "—"} mood={mood}]')
             self._send_json(urls)
             return
+        if path == '/api/clips':
+            # Flat folder, no mood/content-set logic (unlike phase-videos/backgrounds).
+            names = list_files('clips', VIDEO_EXT)
+            urls = [f'/{urllib.parse.quote(f"clips/{n}", safe="/")}' for n in names]
+            api(f'GET /api/clips        → {len(names)} clip(s)')
+            self._send_json(urls)
+            return
         if path == '/api/health':
             payload = self._health_payload()
             api('GET /api/health    → snapshot compteurs')
@@ -210,11 +223,14 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
         if path == '/api/phase-remote':
             pv_files = phase_remote_state.get_cached_phase_video_filenames()
             bg_files = phase_remote_state.get_cached_background_filenames()
+            clip_files = phase_remote_state.get_cached_clip_filenames()
             snap = phase_remote_state.get_snapshot()
             snap['phaseVideoCount'] = len(pv_files)
             snap['phaseVideoFiles'] = pv_files[:200]
             snap['backgroundVideoCount'] = len(bg_files)
             snap['backgroundVideoFiles'] = bg_files[:200]
+            snap['clipVideoCount'] = len(clip_files)
+            snap['clipVideoFiles'] = clip_files[:200]
             snap['validPhases'] = sorted(phase_remote_state.VALID_PHASES)
             snap['panelPhases'] = phase_remote_state.panel_phase_definitions()
             snap['availableContentSets'] = get_available_content_sets('classique', 'dark')
@@ -285,6 +301,7 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
                 return
             pv_files = phase_remote_state.get_cached_phase_video_filenames()
             bg_files = phase_remote_state.get_cached_background_filenames()
+            clip_files = phase_remote_state.get_cached_clip_filenames()
             out = {
                 **snap,
                 'ok': True,
@@ -292,6 +309,8 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
                 'phaseVideoFiles': pv_files[:200],
                 'backgroundVideoCount': len(bg_files),
                 'backgroundVideoFiles': bg_files[:200],
+                'clipVideoCount': len(clip_files),
+                'clipVideoFiles': clip_files[:200],
                 'panelPhases': phase_remote_state.panel_phase_definitions(),
             }
             parts = []
@@ -356,4 +375,5 @@ class AppRequestHandler(SimpleHTTPRequestHandler):
             'stickers': len(list_files('stickers', IMAGE_EXT)),
             'backgrounds': len(list_files('backgrounds', VIDEO_EXT)),
             'phaseVideos': len(list_files('phase_videos', VIDEO_EXT)),
+            'clips': len(list_files('clips', VIDEO_EXT)),
         }

@@ -149,7 +149,9 @@ export function startPhaseRemotePolling() {
         setOsWindowMinLoopMs(newTheme === 'dark' ? OS_WINDOW_DIAGONAL_MIN_LOOP_MS : 0);
       }
 
-      /* Recharger les médias si mood OU content set a changé */
+      /* Reload media if mood OR content set changed.
+         clips/ is not part of this: flat folder, no mood/content-set logic (loaded once
+         on startup — see main.js). */
       if (themeChanged || contentSetChanged) {
         lastAppliedContentSet = newContentSet;
         try {

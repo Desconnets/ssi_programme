@@ -47,6 +47,7 @@ import {
   WEBCAM_WINDOW_MAX_HEIGHT_RATIO,
   WEBCAM_WINDOW_MAX_UPSCALE,
   WEBCAM_WINDOW_MAX_WIDTH_RATIO,
+  CLIP_PHASE_OPEN_CLOSE_MS,
 } from './config.js';
 import { random } from './utils.js';
 import { FALLBACK_STICKER_URL, bindStickerImage } from './sticker-fallback.js';
@@ -66,6 +67,8 @@ const osWindowLayer = document.getElementById('ssiOsWindowLayer');
 const osWindowVideo = document.getElementById('ssiOsWindowVideo');
 const webcamLayer = document.getElementById('ssiWebcamPhaseLayer');
 const webcamVideo = document.getElementById('ssiWebcamVideo');
+const clipLayer = document.getElementById('ssiClipPhaseLayer');
+const clipVideo = document.getElementById('ssiClipVideo');
 
 /** @type {string[]} */
 let allStickerUrls = [];
@@ -80,6 +83,9 @@ let logoUrl = null;
 
 /** @type {string[]} URLs /api/phase-videos — dossier phase_videos/ */
 let phaseVideoUrls = [];
+
+/** @type {string[]} URLs from /api/clips — clips/ folder (Clip phase, manual, audio active) */
+let clipVideoUrls = [];
 
 /**
  * Durée minimale de lecture (ms) avant de passer au logo — 0 = désactivé (thème SSI).
@@ -504,8 +510,9 @@ function prefetchOsWindowVideoUrl(url) {
 
 /**
  * Chrome : en arrière-plan, play() peut échouer (AbortError « save power ») même si la vidéo est prête.
+ * Utilisé par la fenêtre OS et la phase Clip.
  */
-function playOsWindowVideoResilient(video, isStale, onPlaying, onGiveUp) {
+function playVideoResilient(video, isStale, onPlaying, onGiveUp) {
   let visHandler = null;
   let waitTimer = null;
 
@@ -843,10 +850,11 @@ function runWhenBothOsWebcamClosed(done) {
   let n = 0;
   const step = () => {
     n += 1;
-    if (n >= 2) done();
+    if (n >= 3) done();
   };
   hideOsWindowLayerAnimated(step);
   hideWebcamLayerAnimated(step);
+  hideClipLayerAnimated(step);
 }
 
 /**
@@ -869,6 +877,7 @@ export function interruptAllPhases(done) {
 
   osWindowLoadGeneration += 1;
   webcamGeneration += 1;
+  clipGeneration += 1;
   if (osWindowLoadAbort) {
     try {
       osWindowLoadAbort.abort();
@@ -1222,7 +1231,7 @@ export function startOsWindowPhase(opts = {}) {
         osWindowVideo.playsInline = true;
       } catch (_) {}
 
-      playOsWindowVideoResilient(
+      playVideoResilient(
         osWindowVideo,
         () => gen !== osWindowLoadGeneration || phaseFinishing,
         () => {
@@ -1331,6 +1340,148 @@ export function startOsWindowPhase(opts = {}) {
   };
 
   tryOne();
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+//  CLIP PHASE — manual only, audio active (see phase-manager.js: absent from
+//  PHASE_ORDER, so never picked by the auto cycle), no sticker / title overlay.
+// ═══════════════════════════════════════════════════════════════════════════
+/** Incremented on every attempt: invalidates stale timeouts / handlers */
+let clipGeneration = 0;
+
+/** Immediate cleanup (no animation) — also cuts the audio */
+function hideClipLayerImmediate() {
+  if (!clipLayer || !clipVideo) return;
+  clipVideo.onended = null;
+  clipVideo.onerror = null;
+  clipVideo.pause();
+  try {
+    clipVideo.removeAttribute('src');
+    clipVideo.load();
+  } catch (_) {}
+  clipLayer.classList.remove('ssi-clip-phase-layer--open');
+  clipLayer.hidden = true;
+  clipLayer.setAttribute('aria-hidden', 'true');
+}
+
+/**
+ * Animated close (fade), then cleanup.
+ * @param {() => void} [onDone]
+ */
+function hideClipLayerAnimated(onDone) {
+  if (!clipLayer || !clipVideo) {
+    onDone?.();
+    return;
+  }
+  if (!clipLayer.classList.contains('ssi-clip-phase-layer--open')) {
+    hideClipLayerImmediate();
+    onDone?.();
+    return;
+  }
+  clipLayer.classList.remove('ssi-clip-phase-layer--open');
+  window.setTimeout(() => {
+    hideClipLayerImmediate();
+    onDone?.();
+  }, CLIP_PHASE_OPEN_CLOSE_MS);
+}
+
+function clampClipVideoIndex(idx) {
+  if (!clipVideoUrls.length) return 0;
+  const n = Number(idx);
+  const i = Number.isFinite(n) ? Math.floor(n) : 0;
+  return Math.max(0, Math.min(clipVideoUrls.length - 1, i));
+}
+
+/**
+ * Triggered only from the remote panel (the "Clip" button). Full-frame video,
+ * audio active (unlike phase_videos/, muted by default) — never picked by the
+ * auto cycle since it's absent from PHASE_ORDER in phase-manager.js.
+ * @param {{ videoIndex?: number }} [opts]
+ */
+export function startClipPhase(opts = {}) {
+  clearStickers();
+
+  if (!clipVideoUrls.length) {
+    reportLiveEvent('clip_skip', { reason: 'aucun_fichier' });
+    debugLog('[SSI] Phase Clip : aucun fichier dans clips/ → fin de phase');
+    onPhaseEnded();
+    return;
+  }
+  if (!clipLayer || !clipVideo) {
+    reportLiveEvent('clip_skip', { reason: 'dom_manquant' });
+    debugWarn('[SSI] Phase Clip : #ssiClipPhaseLayer ou #ssiClipVideo absent');
+    onPhaseEnded();
+    return;
+  }
+
+  const url = clipVideoUrls[clampClipVideoIndex(opts.videoIndex)];
+
+  hideClipLayerImmediate();
+  clipGeneration += 1;
+  const gen = clipGeneration;
+
+  /* Audio always active here — independent from the "videoMuted" setting (phase_videos). */
+  clipVideo.muted = false;
+  clipVideo.defaultMuted = false;
+  clipVideo.volume = 1;
+  try {
+    clipVideo.playsInline = true;
+  } catch (_) {}
+
+  const finish = (reason) => {
+    if (gen !== clipGeneration) return;
+    hideClipLayerAnimated(() => {
+      debugLog('[PHASE·CLIP] Fin —', reason, '—', liveShortName(url));
+      onPhaseEnded();
+    });
+  };
+
+  clipVideo.onended = () => finish('ended');
+  clipVideo.onerror = () => {
+    if (gen !== clipGeneration) return;
+    reportLiveEvent('clip_fail', { fichier: liveShortName(url) });
+    finish('erreur_lecture');
+  };
+
+  const onLoaded = () => {
+    if (gen !== clipGeneration) return;
+    clipLayer.hidden = false;
+    clipLayer.setAttribute('aria-hidden', 'false');
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        if (gen !== clipGeneration) return;
+        clipLayer.classList.add('ssi-clip-phase-layer--open');
+      });
+    });
+
+    reportLiveEvent('clip', { fichier: liveShortName(url) });
+
+    playVideoResilient(
+      clipVideo,
+      () => gen !== clipGeneration,
+      () => {
+        if (gen !== clipGeneration) return;
+        debugLog('[PHASE·CLIP] Lecture démarrée —', liveShortName(url));
+      },
+      (err) => {
+        if (gen !== clipGeneration) return;
+        debugWarn('[PHASE·CLIP] play() refusé après toutes les reprises —', err?.name, err?.message || '');
+        reportLiveEvent('clip_fail', { fichier: liveShortName(url) });
+        finish('play_refusé');
+      },
+    );
+  };
+
+  clipVideo.addEventListener('loadedmetadata', onLoaded, { once: true });
+  debugLog('[PHASE·CLIP] Lecture —', liveShortName(url));
+  clipVideo.src = url;
+  clipVideo.load();
+}
+
+/** @param {string[]} urls URLs returned by GET /api/clips */
+export function initClipVideos(urls) {
+  clipVideoUrls = (urls || []).filter((u) => typeof u === 'string' && u.length > 0);
+  debugLog('[SSI] clips :', clipVideoUrls.length, 'fichier(s) — phase Clip (manuelle, son actif)');
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

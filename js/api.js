@@ -6,17 +6,19 @@ import { debugLog } from './debug.js';
  */
 export async function loadFromServer() {
   try {
-    const [stickerUrls, backgroundUrls, phaseVideoUrls] = await Promise.all([
+    const [stickerUrls, backgroundUrls, phaseVideoUrls, clipUrls] = await Promise.all([
       fetch('/api/stickers').then((r) => (r.ok ? r.json() : [])),
       fetch('/api/backgrounds').then((r) => (r.ok ? r.json() : [])),
       fetch('/api/phase-videos').then((r) => (r.ok ? r.json() : [])),
+      fetch('/api/clips').then((r) => (r.ok ? r.json() : [])),
     ]);
     debugLog('stickers :', stickerUrls.length);
     debugLog('backgrounds :', backgroundUrls.length);
     debugLog('phase-videos :', phaseVideoUrls.length);
-    return { stickerUrls, backgroundUrls, phaseVideoUrls };
+    debugLog('clips :', clipUrls.length);
+    return { stickerUrls, backgroundUrls, phaseVideoUrls, clipUrls };
   } catch (e) {
     console.error('[SSI] Erreur loadFromServer :', e);
-    return { stickerUrls: [], backgroundUrls: [], phaseVideoUrls: [] };
+    return { stickerUrls: [], backgroundUrls: [], phaseVideoUrls: [], clipUrls: [] };
   }
 }

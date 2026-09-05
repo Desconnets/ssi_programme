@@ -1,6 +1,6 @@
 import { LOGO_PHASE_DURATION_MS, SUPER_BOOM_DURATION_MS, TEXT_PHASE_DURATION_MS } from "./config.js";
-import { prepareSnakeSet, playNextSnakeSticker, startSuperBoom, startOsWindowPhase, interruptAllPhases, startLogoPhase, startWebcamPhase, stopSuperBoom, stopLogoPhase } from "./phases.js";
-import { closeTextPhase, startTextPhase, textContent } from './text-phase.js'; 
+import { prepareSnakeSet, playNextSnakeSticker, startSuperBoom, startOsWindowPhase, interruptAllPhases, startLogoPhase, startWebcamPhase, startClipPhase, stopSuperBoom, stopLogoPhase } from "./phases.js";
+import { closeTextPhase, startTextPhase, textContent } from './text-phase.js';
 
 export const PHASE = Object.freeze({
   SNAKE:        'snake',
@@ -9,8 +9,15 @@ export const PHASE = Object.freeze({
   LOGO:         'logo',
   WEBCAM:       'webcam',
   TEXT:         'text',
+  /** Manual only — see PHASE_ORDER below: deliberately absent from it. */
+  CLIP:         'clip',
 });
 
+/**
+ * Phases proposed by the auto cycle (sequential / random, see pickNextPhase()).
+ * PHASE.CLIP is deliberately excluded: the Clip phase (audio active) only triggers
+ * manually from the remote panel (startPhase(PHASE.CLIP, …) remains directly callable).
+ */
 export const PHASE_ORDER = [
     PHASE.SNAKE,
     PHASE.SUPER_BOOM,
@@ -79,7 +86,10 @@ export function startPhase(phase, params){
                 startWebcamPhase();
                 break;
             case PHASE.TEXT:
-                startTextPhase(params.textContent ?? '', TEXT_PHASE_DURATION_MS);
+                startTextPhase(params?.textContent ?? '', TEXT_PHASE_DURATION_MS);
+                break;
+            case PHASE.CLIP:
+                startClipPhase({ videoIndex: params?.videoIndex });
                 break;
         }
     });
