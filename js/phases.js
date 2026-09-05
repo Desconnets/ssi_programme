@@ -295,7 +295,7 @@ function acquireWebcamStreamForPhase() {
 // ═══════════════════════════════════════════════════════════════════════════
 //  PHASE SNAKE
 // ═══════════════════════════════════════════════════════════════════════════
-function prepareSnakeSet() {
+export function prepareSnakeSet() {
   const pool = allStickerUrls.slice();
   if (!pool.length) {
     snakeSet = [];

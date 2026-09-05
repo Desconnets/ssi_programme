@@ -11,15 +11,12 @@ import {
   OS_WINDOW_DIAGONAL_MIN_LOOP_MS,
 } from './config.js';
 import {
-  applyRemotePhaseCommand,
   forceIdleResumeStandardCycle,
-  interruptAllPhases,
   initStickers,
   initPhaseVideos,
   setOsWindowMinLoopMs,
   setPhasePaused,
   setOsWindowVideoMuted,
-  applyRemotePhaseCommand,
 } from './phases.js';
 import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
