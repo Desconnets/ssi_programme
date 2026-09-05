@@ -12,7 +12,6 @@ import {
 } from './config.js';
 import {
   forceIdleResumeStandardCycle,
-  interruptAllPhases,
   initStickers,
   initPhaseVideos,
   setOsWindowMinLoopMs,
@@ -55,7 +54,7 @@ export function startPhaseRemotePolling() {
   let lastAppliedContentSet = null;
   /** État pause phases appliqué sur la page scène. */
   let lastAppliedPaused = null;
-  /** État du mode manuel/auto */
+    /** État du mode manuel/auto */
   let lastAppliedAutoAdvance = null;
   /** État de la liste phases actives */
   let lastAppliedEnabledPhases = null;
@@ -136,6 +135,7 @@ export function startPhaseRemotePolling() {
         lastAppliedSelectMode = selectMode;
         setPhaseSelectMode(selectMode);
       }
+
 
       /* Mood visuel (classique / dark) + content set — calculer les changements AVANT de mettre à jour */
       const newTheme = typeof data.theme === 'string' ? data.theme : 'classique';

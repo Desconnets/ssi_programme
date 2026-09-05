@@ -90,15 +90,14 @@ Champ `seq` : incrémenté à chaque commande active. La scène détecte `seq > 
 
 ---
 
-## Système de thèmes (SSI / Diagonal)
+## Système de thèmes (classique / dark)
 
-1. **`phase_remote_state.py`** stocke `_theme` (`'ssi'` | `'diagonal'`).
+1. **`phase_remote_state.py`** stocke `_theme` (`'classique'` | `'dark'`).
 2. Le GET renvoie `theme` dans le snapshot → la scène lit `data.theme` au poll.
 3. `phase-remote.js` pose `document.documentElement.dataset.appTheme = theme`.
-4. **`style.css`** contient les règles `[data-app-theme="diagonal"]` qui surchargent les couleurs.
-5. Les médias (stickers, vidéos, fonds) sont dans des sous-dossiers par thème :
-   `stickers/ssi/`, `stickers/diagonal/`, `phase_videos/ssi/`, etc.
-6. Si le sous-dossier est vide, repli automatique sur le dossier racine.
+4. **`style.css`** contient les règles `[data-app-theme="dark"]` qui surchargent les couleurs.
+5. Les médias sont dans `content/{mood}/{catégorie}/{stickers|videos|backgrounds}/`.
+6. Bouton catégorie → uniquement cette bibliothèque ; « Racine » → toutes les catégories du mood.
 
 ---
 
@@ -115,10 +114,10 @@ Voir la section TÉLÉCOMMANDE dans `js/phases.js` et `docs/remote-panel.md`.
 5. Contrôle dans `phase_panel.html` + `js/phase-panel-app.js`
 
 ### Nouveau thème visuel
-1. Ajouter l'id dans `VALID_THEMES` (`phase_remote_state.py`)
+1. Ajouter l'id dans `VALID_MOODS` (`phase_remote_state.py`)
 2. Ajouter un bloc `[data-app-theme="nouveau"]` dans `style.css`
-3. Créer les sous-dossiers `stickers/nouveau/`, `phase_videos/nouveau/`, `backgrounds/nouveau/`
-4. Ajouter un bouton dans `phase_panel.html`
+3. Créer `content/nouveau/{catégorie}/stickers|videos|backgrounds/`
+4. Ajouter un bouton mood dans `phase_panel.html`
 
 ---
 
@@ -130,23 +129,21 @@ Tout le contenu organisé est sous `content/`. Les dossiers racine `stickers/`, 
 content/
   logos/
     classique/   ← SSI-logo1.gif … SSI-logo4.gif
-    dark/        ← SSI-logo1_techno.gif … (versions glitchées)
+    dark/        ← SSI-logo1_techno.gif …
   classique/     ← mood SSI (couleurs violet/turquoise/rose)
-    stickers/
-      boom/         4 fichiers
-      jeux-video/  14 fichiers  (Nintendo, Pokémon, Sims, Tony Hawk…)
-      pop-culture/ 22 fichiers  (Harry Potter, Disney, Britney, Matrix…)
-      doux/         2 fichiers  (Ghibli, coeurs)
-    videos/
-      boom/         4 vidéos   (Daft Punk ×2, Mr Oizo, Rollercoaster)
-      jeux-video/  11 vidéos   (Nintendo, Sims, Pokémon, Scrubs, Rugrats…)
-      pop-culture/ 13 vidéos   (Matrix, Fight Club, Tarantino, zapping…)
-    backgrounds/
-      boom/ doux/ urban/ jeux-video/ pop-culture/
+    boom/
+      stickers/  videos/  backgrounds/
+    jeux-video/
+      stickers/  videos/  backgrounds/
+    pop-culture/
+      stickers/  videos/  backgrounds/
+    doux/
+      stickers/  videos/  backgrounds/
+    urban/
+      stickers/  videos/  backgrounds/
   dark/          ← mood glitché/électrique (fichiers _techno)
-    stickers/    (mêmes catégories, versions _techno)
-    videos/      (mêmes catégories, versions _techno)
-    backgrounds/ (mêmes catégories)
+    boom/  jeux-video/  pop-culture/  doux/  urban/
+      (chaque catégorie : stickers/ videos/ backgrounds/)
 
 stickers/        → repli final (vide — tout est dans content/)
 phase_videos/    → repli final (vide)
@@ -155,6 +152,8 @@ archive/         → code archivé (playlist-mode/)
 docs/            → documentation technique
 ```
 
+**Ajouter une catégorie** : créer `content/classique/ma-categorie/stickers/` (et videos/, backgrounds/). Le bouton s’appelle `ma-categorie`.
+
 ---
 
-*Dernière mise à jour : juin 2026*
+*Dernière mise à jour : septembre 2026*

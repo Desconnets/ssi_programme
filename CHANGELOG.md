@@ -1,5 +1,42 @@
 # Changelog
 
+## [Septembre 2026] — Catégories d’abord + webcam REC
+
+### Architecture `content/` (catégorie = dossier)
+
+Les médias ne sont plus `content/{mood}/{type}/{catégorie}/` mais **`content/{mood}/{catégorie}/{type}/`**.
+
+```
+content/
+  logos/classique/   logos/dark/
+  classique/
+    boom/          stickers/  videos/  backgrounds/
+    jeux-video/    stickers/  videos/  backgrounds/
+    pop-culture/   …
+    doux/
+    urban/
+  dark/            (mêmes catégories)
+```
+
+| Sujet | Détail |
+|--------|--------|
+| **Bouton = nom du dossier** | `get_available_content_sets()` scanne `content/{mood}/`. Nouveau dossier `content/classique/anime/` → bouton **anime**, aucun JS à modifier. |
+| **Clic catégorie** | Charge uniquement `content/{mood}/{catégorie}/{stickers\|videos\|backgrounds}/`. Dossier vide → liste vide (plus de mélange avec tout le mood). |
+| **Racine** | Toutes les catégories du mood mélangées. Logos toujours `content/logos/{mood}/`. |
+| **Fichiers** | `fsutil.py`, `phase_video_convert.py` (`_convert_content_dir`), `live_report.py`. Migration des dossiers existants. Doc : `README.md`, `docs/architecture.md`, `docs/file-index.md`. |
+
+### Webcam — luminosité + overlay REC
+
+| Sujet | Détail |
+|--------|--------|
+| **Luminosité** | Slider télécommande (20–300 %) → POST `webcamBrightness` → CSS `filter: brightness()` sur `#ssiWebcamVideo`. |
+| **Overlay REC** | Case « Overlay REC caméscope » → `webcamRecOverlay`. Point rouge clignotant, label REC, timecode `HH:MM:SS` pendant la phase webcam. |
+| **Fichiers** | `phase_remote_state.py`, `phases.js`, `phase-remote.js`, `index.html`, `style.css`, `phase_panel.html`, `phase-panel-app.js`. |
+
+**Relancer le serveur Python** après ces changements (le panneau JS se recharge tout seul, pas le process Python).
+
+---
+
 ## [Juin 2026 — v2] — Système de contenu par mood et catégories
 
 ### Architecture `content/`
@@ -67,7 +104,7 @@ content/
 
 ---
 
-> **Dernière mise à jour : avril 2026** — voir aussi `ROADMAP.md` pour les étapes techniques et `README.md` pour l'usage.
+> **Dernière mise à jour : septembre 2026** — voir aussi `ROADMAP.md` pour les étapes techniques et `README.md` pour l'usage.
 
 ---
 

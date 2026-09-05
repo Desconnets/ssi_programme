@@ -2,9 +2,11 @@
 import errno
 import os
 
-# Noms réservés exclus des listes de content sets
-_EXCLUDED_SUBDIRS = frozenset({'_archive', 'classique', 'dark'})
-
+# Dossiers qui ne sont jamais des catégories (types médias, archives, logos)
+_RESERVED_DIR_NAMES = frozenset({
+    '_archive', '_pool', 'classique', 'dark', 'logos',
+    'stickers', 'videos', 'backgrounds',
+})
 
 def list_files(directory: str, exts: frozenset) -> list:
     """Liste simple dans un dossier (chemins relatifs à ce dossier)."""
@@ -27,45 +29,47 @@ def _list_dir(path: str, exts: frozenset) -> list[str]:
         return []
 
 
+def _is_category_dir(name: str) -> bool:
+    return not name.startswith('_') and name not in _RESERVED_DIR_NAMES
+
+
 def list_content_files(media_type: str, exts: frozenset,
                        content_set: str = '', mood: str = 'classique',
                        legacy_dir: str = '') -> list[str]:
     """
     Retourne des chemins complets relatifs à ROOT_DIR pour les fichiers médias.
 
-    Priorité (3 niveaux) :
-      1. content/{mood}/{media_type}/{content_set}/  — set précis
-      2. content/{mood}/{media_type}/               — pool général (tous sous-dossiers mélangés)
-      3. {legacy_dir}/                              — repli racine (fichiers non-organisés)
+    Structure : content/{mood}/{catégorie}/{media_type}/
 
-    Pour les stickers uniquement, les logos de content/logos/{mood}/ sont toujours inclus
-    (la phase logo les retrouve via le mot-clé "logo" dans le nom de fichier).
+    Si une catégorie est choisie : uniquement ce dossier (plus les logos pour les stickers).
+    Si « Racine » (content_set vide) : toutes les catégories du mood mélangées.
+    Repli final : {legacy_dir}/ (stickers/, phase_videos/, backgrounds/).
 
-    Exemple de retour : ['content/classique/videos/boom/daft_punk ok_converti.mp4']
-    → URL : /content/classique/videos/boom/daft_punk ok_converti.mp4
+    Exemple : ['content/classique/boom/videos/daft_punk ok_converti.mp4']
+    → URL : /content/classique/boom/videos/daft_punk ok_converti.mp4
     """
-    # Niveau 1 — content set précis
+    # Catégorie précise — on ne mélange pas avec le reste du mood
     if content_set:
-        p = os.path.join('content', mood, media_type, content_set)
+        p = os.path.join('content', mood, content_set, media_type)
         files = _list_dir(p, exts)
-        if files:
-            result = [f'content/{mood}/{media_type}/{content_set}/{f}' for f in files]
-            # Toujours ajouter les logos si on charge des stickers
-            if media_type == 'stickers':
-                result += _list_logos(mood, exts)
+        result = [f'content/{mood}/{content_set}/{media_type}/{f}' for f in files]
+        if media_type == 'stickers':
+            result += _list_logos(mood, exts)
+        if result:
             return result
+        # Dossier catégorie vide : logos seuls (stickers) ou liste vide
+        return result
 
-    # Niveau 2 — pool du mood : fichiers directs + tous les sous-dossiers mélangés
-    base = os.path.join('content', mood, media_type)
+    # Racine — pool de toutes les catégories du mood
+    mood_path = os.path.join('content', mood)
     all_files: list[str] = []
-    for f in _list_dir(base, exts):
-        all_files.append(f'content/{mood}/{media_type}/{f}')
     try:
-        for sub in sorted(os.listdir(base)):
-            sub_path = os.path.join(base, sub)
-            if os.path.isdir(sub_path) and not sub.startswith('_'):
-                for f in _list_dir(sub_path, exts):
-                    all_files.append(f'content/{mood}/{media_type}/{sub}/{f}')
+        for cat in sorted(os.listdir(mood_path)):
+            if not _is_category_dir(cat):
+                continue
+            cat_type = os.path.join(mood_path, cat, media_type)
+            for f in _list_dir(cat_type, exts):
+                all_files.append(f'content/{mood}/{cat}/{media_type}/{f}')
     except OSError:
         pass
     if all_files:
@@ -73,7 +77,7 @@ def list_content_files(media_type: str, exts: frozenset,
             all_files += _list_logos(mood, exts)
         return all_files
 
-    # Niveau 3 — repli racine legacy
+    # Repli racine legacy
     if legacy_dir:
         files = _list_dir(legacy_dir, exts)
         return [f'{legacy_dir}/{f}' for f in files]
@@ -90,22 +94,18 @@ def _list_logos(mood: str, exts: frozenset) -> list[str]:
 
 def get_available_content_sets(*moods: str) -> list[str]:
     """
-    Découvre automatiquement les content sets disponibles en scannant
-    content/{mood}/{media_type}/ pour chaque mood donné.
-    Retourne la liste triée et dédupliquée (ex. ['boom', 'doux', 'jeux-video', ...]).
+    Découvre les catégories : sous-dossiers de content/{mood}/.
+    Le nom du bouton = le nom du dossier (boom, jeux-video, …).
     """
     found: set[str] = set()
     for mood in moods:
         mood_dir = os.path.join('content', mood)
         if not os.path.isdir(mood_dir):
             continue
-        for media_type in ('stickers', 'videos', 'backgrounds'):
-            mt_dir = os.path.join(mood_dir, media_type)
-            try:
-                for entry in os.scandir(mt_dir):
-                    if entry.is_dir() and not entry.name.startswith('_') \
-                            and entry.name not in _EXCLUDED_SUBDIRS:
-                        found.add(entry.name)
-            except OSError:
-                pass
+        try:
+            for entry in os.scandir(mood_dir):
+                if entry.is_dir() and _is_category_dir(entry.name):
+                    found.add(entry.name)
+        except OSError:
+            pass
     return sorted(found)

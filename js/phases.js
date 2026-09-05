@@ -369,7 +369,7 @@ export function playNextSnakeSticker() {
   if (!snakeSet.length) return;
 
   if (snakeCyclesDone >= 3) {
-    if (!isAutoAdvanceEnabled()) {
+     if (!isAutoAdvanceEnabled()) {
       /* Manual mode : we reset the snakeCyclesDone counter */
       snakeCyclesDone = 0;
       playNextSnakeSticker();
@@ -622,7 +622,7 @@ export function startSuperBoom() {
     img.style.opacity = '1';
     stickersLayer.appendChild(img);
   });
-}
+  }  
 
 export function stopSuperBoom(){
   inSuperBoom = false;
@@ -864,10 +864,6 @@ function runWhenBothOsWebcamClosed(done) {
 export function interruptAllPhases(done) {
   const myGen = ++remoteInterruptGen;
 
-  if (snakeTimer) {
-    clearTimeout(snakeTimer);
-    snakeTimer = null;
-  }
   clearWebcamTimers();
   clearOsWindowTimers();
 
@@ -902,9 +898,60 @@ function clampPhaseVideoIndex(idx) {
   return Math.max(0, Math.min(phaseVideoUrls.length - 1, i));
 }
 
+/**
+ * Télécommande HTTP : interrompt le cycle en cours puis lance la phase demandée (mêmes animations).
+ * @param {string} phase snake | super_boom | os_video | logo | webcam
+ * @param {number | null | undefined} [videoIndex] index dans la liste API phase-videos (os_video)
+ */
+// ═══════════════════════════════════════════════════════════════════════════
+//  TÉLÉCOMMANDE — commandes distantes (phase-remote.js → ici)
+//  Ajouter une phase : VALID_PHASES + PANEL_PHASE_* dans phase_remote_state.py
+//  + un cas dans applyRemotePhaseCommand() + startXxxPhase() ici
+// ═══════════════════════════════════════════════════════════════════════════
+export function applyRemotePhaseCommand(phase, videoIndex) {
+  const p = String(phase || '')
+    .toLowerCase()
+    .replace(/-/g, '_');
+  const known = new Set(['snake', 'super_boom', 'os_video', 'logo', 'webcam']);
+  if (!known.has(p)) {
+    debugWarn('[SSI] Télécommande phase inconnue :', phase);
+    return;
+  }
+  interruptAllPhases(() => {
+    if (p === 'snake') {
+      snakeCyclesDone = 0;
+      currentSnakeSetIndex = 0;
+      prepareSnakeSet();
+      playNextSnakeSticker();
+      return;
+    }
+    if (p === 'super_boom') {
+      startSuperBoom();
+      return;
+    }
+    if (p === 'os_video') {
+      const url = phaseVideoUrls.length ? phaseVideoUrls[clampPhaseVideoIndex(videoIndex)] : null;
+      if (url) {
+        startOsWindowPhase({ forcedUrl: url });
+      } else {
+        reportLiveEvent('os_window_skip', { reason: 'telecommande_sans_video' });
+        startLogoPhase();
+      }
+      return;
+    }
+    if (p === 'logo') {
+      startLogoPhase();
+      return;
+    }
+    if (p === 'webcam') {
+      startWebcamPhase();
+    }
+  });
+}
+
 /** Reprise boucle standard (snake) après délai sans commande télécommande. */
 export function forceIdleResumeStandardCycle() {
-  startPhase(pickNextPhase());
+   startPhase(pickNextPhase());
 }
 
 /**
@@ -919,14 +966,11 @@ export function setPhasePaused(paused) {
   } else {
     /* Passer par interruptAllPhases pour s'assurer qu'aucune animation
        de la pause précédente n'est encore en cours avant de redémarrer. */
-    interruptAllPhases(() => {
-      startPhase(pickNextPhase());
-    });
+     startPhase(pickNextPhase());
   }
 }
 
 function resumeSnakeAfterWebcam() {
-  //prepareSnakeSet();
   startVisualCycle();
 }
 
@@ -1523,7 +1567,8 @@ export function startLogoPhase() {
   img.style.transform = 'translate(-50%, -50%) scale(1)';
   img.style.opacity = '1';
   stickersLayer.appendChild(img);
-}
+
+  }
 
 export function stopLogoPhase(){
   clearStickers();
