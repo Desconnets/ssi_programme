@@ -13,12 +13,15 @@ import {
 import {
   applyRemotePhaseCommand,
   forceIdleResumeStandardCycle,
+  interruptAllPhases,
   initStickers,
   initPhaseVideos,
   setOsWindowMinLoopMs,
   setPhasePaused,
   setOsWindowVideoMuted,
+  applyRemotePhaseCommand,
 } from './phases.js';
+import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
 
 const ENDPOINT = '/api/phase-remote';
@@ -53,6 +56,12 @@ export function startPhaseRemotePolling() {
   let lastAppliedContentSet = null;
   /** État pause phases appliqué sur la page scène. */
   let lastAppliedPaused = null;
+    /** État du mode manuel/auto */
+  let lastAppliedAutoAdvance = null;
+  /** État de la liste phases actives */
+  let lastAppliedEnabledPhases = null;
+  /** État du mode sequentiel/random */
+  let lastAppliedSelectMode = null;
   /** État mute vidéo appliqué sur la page scène. */
   let lastAppliedVideoMuted = null;
   /** @type {AbortController | null} */
@@ -82,7 +91,7 @@ export function startPhaseRemotePolling() {
           lastAppliedPhaseCommandSeq = pcs;
           const ph = data.phase;
           if (ph) {
-            applyRemotePhaseCommand(ph, data.videoIndex);
+            startPhase(ph, { videoIndex: data.videoIndex });
           }
         }
       }
@@ -100,6 +109,26 @@ export function startPhaseRemotePolling() {
         lastAppliedPaused = isPaused;
         setPhasePaused(isPaused);
       }
+
+      const isAutoAdvance = data.phaseAutoAdvance !== false;
+      if (isAutoAdvance !== lastAppliedAutoAdvance) {
+        lastAppliedAutoAdvance = isAutoAdvance;
+        setPhaseAutoAdvance(isAutoAdvance);
+      }
+
+      const enabledPhasesData = Array.isArray(data.enabledPhases) ? data.enabledPhases : null;
+      const enabledKey = enabledPhasesData ? enabledPhasesData.join(',') : null;
+      if (enabledKey !== lastAppliedEnabledPhases) {
+        lastAppliedEnabledPhases = enabledKey;
+        if (enabledPhasesData) setEnabledPhases(enabledPhasesData);
+      }
+
+      const selectMode = data.phaseSelectMode === 'random' ? 'random' : 'sequential';
+      if (selectMode !== lastAppliedSelectMode) {
+        lastAppliedSelectMode = selectMode;
+        setPhaseSelectMode(selectMode);
+      }
+
 
       /* Mood visuel (classique / dark) + content set — calculer les changements AVANT de mettre à jour */
       const newTheme = typeof data.theme === 'string' ? data.theme : 'classique';
@@ -137,8 +166,8 @@ export function startPhaseRemotePolling() {
         const stale = Date.now() - ts > idleMs;
         if (stale && idleFiredForLastCommandMs !== ts) {
           idleFiredForLastCommandMs = ts;
-          /* Ne pas relancer le cycle si les phases sont en pause */
-          if (!data.phasesPaused) {
+          /* Ne pas relancer le cycle si les phases sont en pause ou si on est en mode manuel */
+          if (!data.phasesPaused && data.phaseAutoAdvance !== false) {
             forceIdleResumeStandardCycle();
           }
         }
