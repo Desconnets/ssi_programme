@@ -41,9 +41,10 @@ function fitTextToLayer(content, layer) {
 }
 
 export function updateTextContent(newContent){
+  textContent = newContent ?? '';
   const { layer, content } = getElements();
   if (!content) return;
-  content.innerHTML = newContent ?? '';
+  content.innerHTML = textContent;
   fitTextToLayer(content, layer);
 }
 
@@ -74,8 +75,17 @@ export function applyTextPulse(levels, t) {
 
 // Public: call from remote command or cycle
 export function startTextPhase(text, durationMs, callback) {
+  const resolved = text ?? '';
+  if (resolved.trim() === '') {
+    /* Nothing to display (e.g. the auto cycle reaches Text before the operator has
+       set any message) — skip immediately instead of leaving a blank screen for the
+       full phase duration. Same "nothing to show" pattern as the video window phase. */
+    onPhaseEnded();
+    return;
+  }
+  textContent = resolved;
   const { layer, content } = getElements();
-  content.innerHTML = text ?? '';
+  content.innerHTML = textContent;
   fitTextToLayer(content, layer);
   layer.classList.add('ssi-text-phase-layer--open');
   const dur = durationMs ?? TEXT_PHASE_DURATION_MS;

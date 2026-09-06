@@ -23,8 +23,8 @@ export const PHASE_ORDER = [
     PHASE.SUPER_BOOM,
     PHASE.VIDEO,
     PHASE.LOGO,
+    PHASE.TEXT,
     PHASE.WEBCAM,
-    PHASE.TEXT
 ];
 
 let phaseSelectMode = 'sequential'; // 'sequential' | 'random'
@@ -86,7 +86,9 @@ export function startPhase(phase, params){
                 startWebcamPhase();
                 break;
             case PHASE.TEXT:
-                startTextPhase(params?.textContent ?? '', TEXT_PHASE_DURATION_MS);
+                /* Fall back to the last configured message when the auto cycle reaches
+                   Text without an explicit remote command (no params) — see text-phase.js. */
+                startTextPhase(params?.textContent ?? textContent ?? '', TEXT_PHASE_DURATION_MS);
                 break;
             case PHASE.CLIP:
                 startClipPhase({ videoIndex: params?.videoIndex });
