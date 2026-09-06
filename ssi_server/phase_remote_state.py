@@ -62,10 +62,10 @@ VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam', '
 
 # Phases proposées par la sélection automatique (séquentielle ou aléatoire).
 # Désactiver une phase ne l'empêche pas d'être déclenchée manuellement.
-# "clip" is deliberately excluded: manual-only phase (see dedicated user story),
-# never picked by the auto cycle — even if a client tries to add it to enabledPhases
-# (rejected in post_remote_payload below).
-AUTO_ADVANCE_PHASES: frozenset[str] = VALID_PHASES - frozenset({'clip'})
+# "clip" and "text" are deliberately excluded: manual-only phases, never picked by
+# the auto cycle — even if a client tries to add them to enabledPhases (rejected in
+# post_remote_payload below).
+AUTO_ADVANCE_PHASES: frozenset[str] = VALID_PHASES - frozenset({'clip', 'text'})
 _enabled_phases: set[str] = set(AUTO_ADVANCE_PHASES)
 
 VALID_PHASE_SELECT_MODES = frozenset({'sequential', 'random'})
@@ -77,8 +77,8 @@ PANEL_PHASE_ORDER: tuple[str, ...] = (
     'super_boom',
     'os_video',
     'logo',
-    'text',
     'webcam',
+    'text',
     'clip',
 )
 
@@ -362,7 +362,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
             if invalid:
                 raise ValueError(
                     f'enabledPhases invalide(s): {sorted(invalid)} (attendu: {sorted(AUTO_ADVANCE_PHASES)} — '
-                    "« clip » est manuel uniquement, jamais dans le cycle auto)"
+                    "« clip » et « text » sont manuelles uniquement, jamais dans le cycle auto)"
                 )
             if not cleaned:
                 raise ValueError('enabledPhases ne peut pas être vide (au moins une phase active)')

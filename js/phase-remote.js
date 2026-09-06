@@ -19,7 +19,7 @@ import {
   setPhasePaused,
   setOsWindowVideoMuted,
 } from './phases.js';
-import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode } from './phase-manager.js';
+import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode, PHASE_ORDER } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
 import { updateTextContent } from './text-phase.js';
 
@@ -175,8 +175,11 @@ export function startPhaseRemotePolling() {
         const stale = Date.now() - ts > idleMs;
         if (stale && idleFiredForLastCommandMs !== ts) {
           idleFiredForLastCommandMs = ts;
-          /* Ne pas relancer le cycle si les phases sont en pause ou si on est en mode manuel */
-          if (!data.phasesPaused && data.phaseAutoAdvance !== false) {
+          /* Ne pas relancer le cycle si les phases sont en pause, si on est en mode manuel,
+             ou si la phase courante est manuelle uniquement (Texte / Clip, absentes de
+             PHASE_ORDER) : ces phases restent affichées jusqu'à un changement explicite,
+             elles n'expirent pas par idle-resume. */
+          if (!data.phasesPaused && data.phaseAutoAdvance !== false && PHASE_ORDER.includes(data.phase)) {
             forceIdleResumeStandardCycle();
           }
         }
