@@ -1,4 +1,4 @@
-import { LOGO_PHASE_DURATION_MS, SUPER_BOOM_DURATION_MS, TEXT_PHASE_DURATION_MS } from "./config.js";
+import { LOGO_PHASE_DURATION_MS, SUPER_BOOM_DURATION_MS } from "./config.js";
 import { prepareSnakeSet, playNextSnakeSticker, startSuperBoom, startOsWindowPhase, interruptAllPhases, startLogoPhase, startWebcamPhase, startClipPhase, stopSuperBoom, stopLogoPhase } from "./phases.js";
 import { closeTextPhase, startTextPhase, textContent } from './text-phase.js';
 
@@ -8,6 +8,7 @@ export const PHASE = Object.freeze({
   VIDEO:        'os_video',
   LOGO:         'logo',
   WEBCAM:       'webcam',
+  /** Manual only — see PHASE_ORDER below: deliberately absent from it. */
   TEXT:         'text',
   /** Manual only — see PHASE_ORDER below: deliberately absent from it. */
   CLIP:         'clip',
@@ -15,15 +16,15 @@ export const PHASE = Object.freeze({
 
 /**
  * Phases proposed by the auto cycle (sequential / random, see pickNextPhase()).
- * PHASE.CLIP is deliberately excluded: the Clip phase (audio active) only triggers
- * manually from the remote panel (startPhase(PHASE.CLIP, …) remains directly callable).
+ * PHASE.TEXT and PHASE.CLIP are deliberately excluded: both only trigger manually
+ * from the remote panel (startPhase(PHASE.TEXT, …) / startPhase(PHASE.CLIP, …) remain
+ * directly callable).
  */
 export const PHASE_ORDER = [
     PHASE.SNAKE,
     PHASE.SUPER_BOOM,
     PHASE.VIDEO,
     PHASE.LOGO,
-    PHASE.TEXT,
     PHASE.WEBCAM,
 ];
 
@@ -86,9 +87,9 @@ export function startPhase(phase, params){
                 startWebcamPhase();
                 break;
             case PHASE.TEXT:
-                /* Fall back to the last configured message when the auto cycle reaches
-                   Text without an explicit remote command (no params) — see text-phase.js. */
-                startTextPhase(params?.textContent ?? textContent ?? '', TEXT_PHASE_DURATION_MS);
+                /* Manual only (see PHASE_ORDER above): fall back to the last configured
+                   message if triggered without an explicit textContent param — see text-phase.js. */
+                startTextPhase(params?.textContent ?? textContent ?? '');
                 break;
             case PHASE.CLIP:
                 startClipPhase({ videoIndex: params?.videoIndex });
