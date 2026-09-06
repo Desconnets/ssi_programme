@@ -19,6 +19,7 @@ Thread-safety : toutes les lectures/écritures des variables _privées passent p
 from __future__ import annotations
 
 import os
+import re
 import threading
 import time
 from typing import Any
@@ -31,6 +32,13 @@ _video_index: int | None = None
 # Incrémenté seulement si le POST contient « phase » — pour que la page ne relance pas la phase à chaque POST fond.
 _phase_command_seq = 0
 _text_content: str | None = None
+# Style du texte (phase Texte) — null = valeurs par défaut CSS côté scène (voir js/config.js
+# TEXT_FONT_PRESETS / TEXT_COLOR_DEFAULT, seule source des libellés et de la pile CSS des polices).
+_text_color: str | None = None
+_text_font: str | None = None
+_TEXT_COLOR_RE = re.compile(r'^#[0-9a-fA-F]{6}$')
+# Ids reconnus ; doit rester synchronisé avec TEXT_FONT_PRESETS dans js/config.js.
+TEXT_FONT_IDS = frozenset({'comic', 'mono', 'hand', 'system', 'serif'})
 
 # Fond scène (dégradé + vidéos backgrounds/)
 _bg_gradient_opacity: float | None = None
@@ -231,6 +239,8 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'enabledPhases': [p for p in PANEL_PHASE_ORDER if p in _enabled_phases],
         'phaseSelectMode': _phase_select_mode,
         'textContent': _text_content,
+        'textColor': _text_color,
+        'textFont': _text_font,
     }
 
 
@@ -257,7 +267,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     global _seq, _last_command_ms, _phase, _video_index, _phase_command_seq
     global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set, _phases_auto_advance
     global _enabled_phases, _phase_select_mode
-    global _text_content
+    global _text_content, _text_color, _text_font
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -276,15 +286,18 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_enabled_phases = 'enabledPhases' in data
     has_select_mode = 'phaseSelectMode' in data
     has_text = 'textContent' in data
+    has_text_color = 'textColor' in data
+    has_text_font = 'textFont' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
             and not has_idle_resume and not has_theme and not has_pause \
             and not has_auto_advance and not has_enabled_phases and not has_select_mode \
-            and not has_text \
+            and not has_text and not has_text_color and not has_text_font \
             and not has_video_muted and not has_content_set:
         raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, enabledPhases, phaseSelectMode'
-            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet, textContent'
+            'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet, '
+            'textContent, textColor, textFont'
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
@@ -386,6 +399,26 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
         if has_text:
             tc = data.get('textContent')
             _text_content = str(tc) if tc is not None else ''
+
+        if has_text_color:
+            tcol = data.get('textColor')
+            if tcol is None or tcol == '':
+                _text_color = None
+            else:
+                s = str(tcol).strip()
+                if not _TEXT_COLOR_RE.match(s):
+                    raise ValueError('textColor doit être une couleur hex #rrggbb (ou null)')
+                _text_color = s
+
+        if has_text_font:
+            tfont = data.get('textFont')
+            if tfont is None or tfont == '':
+                _text_font = None
+            else:
+                s = str(tfont).strip().lower()
+                if s not in TEXT_FONT_IDS:
+                    raise ValueError(f'textFont invalide: {tfont!r} (attendu: {sorted(TEXT_FONT_IDS)})')
+                _text_font = s
 
         if has_content_set:
             cs = str(data.get('contentSet') or '')

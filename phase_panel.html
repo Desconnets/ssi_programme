@@ -380,6 +380,17 @@
         <div id="panelActions"></div>
          <div class="panel-field" style="margin-top: 0.5rem">
             <label for="text-editor">Message (phase Texte)</label>
+            <p class="panel-field-hint">Le HTML est accepté (ex. <code>&lt;b&gt;gras&lt;/b&gt;</code>, <code>&lt;i&gt;italique&lt;/i&gt;</code>).</p>
+            <div class="panel-row">
+              <input type="color" id="panelTextColor" value="#ffffff" title="Couleur du texte" style="width: 2.4rem; height: 2rem; padding: 0; border-radius: 6px; border: 1px solid #888;" />
+              <select id="panelTextFont" style="flex: 1; padding: 0.35rem 0.5rem; border-radius: 6px; border: 1px solid #888;">
+                <option value="comic">Comic Sans (la base)</option>
+                <option value="mono">Monospace (genre Matrix)</option>
+                <option value="hand">Manuscrite</option>
+                <option value="system">Système (genre Arial)</option>
+                <option value="serif">Serif (genre Times New Roman)</option>
+              </select>
+            </div>
             <textarea
               id="text-editor"
               rows="4"

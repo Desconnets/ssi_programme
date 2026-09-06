@@ -1,4 +1,4 @@
-import { TEXT_PHASE_DURATION_MS, SMOOTH_SCALE, SMOOTH_ROTATE } from "./config.js";
+import { TEXT_PHASE_DURATION_MS, SMOOTH_SCALE, SMOOTH_ROTATE, TEXT_COLOR_DEFAULT, TEXT_FONT_PRESETS, TEXT_FONT_DEFAULT } from "./config.js";
 import { onPhaseEnded } from "./phase-manager.js";
 import { lerp } from "./utils.js";
 
@@ -45,6 +45,19 @@ export function updateTextContent(newContent){
   const { layer, content } = getElements();
   if (!content) return;
   content.innerHTML = textContent;
+  fitTextToLayer(content, layer);
+}
+
+/**
+ * Applies color + font independently of the text content itself, so a change from the
+ * remote panel updates live without restarting the phase (same pattern as updateTextContent).
+ */
+export function updateTextStyle(color, fontId) {
+  const { layer, content } = getElements();
+  if (!content) return;
+  content.style.color = color || TEXT_COLOR_DEFAULT;
+  const preset = TEXT_FONT_PRESETS[fontId] ?? TEXT_FONT_PRESETS[TEXT_FONT_DEFAULT];
+  content.style.fontFamily = preset.css;
   fitTextToLayer(content, layer);
 }
 
