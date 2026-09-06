@@ -248,6 +248,8 @@ async function bootstrap() {
   const textEditor = /** @type {HTMLTextAreaElement} */ (document.getElementById('text-editor'));
   const btnUpdateTextContent = document.getElementById('btnUpdateTextContent');
   const textLiveUpdateCheck = /** @type {HTMLInputElement} */ (document.getElementById('panelTextLiveUpdate'));
+  const textColorInput = /** @type {HTMLInputElement} */ (document.getElementById('panelTextColor'));
+  const textFontSelect = /** @type {HTMLSelectElement} */ (document.getElementById('panelTextFont'));
 
   if (
     !logEl ||
@@ -278,7 +280,9 @@ async function bootstrap() {
     !btnPhaseSelectModeRandom ||
     !textEditor ||
     !btnUpdateTextContent ||
-    !textLiveUpdateCheck
+    !textLiveUpdateCheck ||
+    !textColorInput ||
+    !textFontSelect
   ) {
     console.error('[phase-panel] DOM incomplet');
     return;
@@ -356,6 +360,10 @@ async function bootstrap() {
 
       /* Sync case muet vidéo */
       videoMutedCheck.checked = j.videoMuted !== false;
+
+      /* Sync couleur/police du texte (n'écrase pas le message : textEditor reste write-only) */
+      textColorInput.value = typeof j.textColor === 'string' && j.textColor ? j.textColor : '#ffffff';
+      textFontSelect.value = typeof j.textFont === 'string' && j.textFont ? j.textFont : 'comic';
 
       /* Sync boutons mood */
       const activeTheme = typeof j.theme === 'string' ? j.theme : 'classique';
@@ -535,6 +543,36 @@ async function bootstrap() {
   btnUpdateTextContent.addEventListener('click', () => {
     clearTimeout(liveUpdateTimer);
     void sendTextContentUpdate();
+  });
+
+  /* Couleur + police : toujours en direct (indépendant de la case "mise à jour en direct"
+     du message, qui ne concerne que le contenu). */
+  let textStyleTimer = null;
+  textColorInput.addEventListener('input', () => {
+    clearTimeout(textStyleTimer);
+    textStyleTimer = setTimeout(async () => {
+      log.append('cmd', 'Couleur texte', textColorInput.value);
+      try {
+        const res = await postRemote({ textColor: textColorInput.value });
+        logRemoteResult('POST couleur texte', res);
+      } catch (e) {
+        const m = e && e.message ? e.message : String(e);
+        log.append('err', 'POST couleur texte', m);
+        statusLine.textContent = m;
+      }
+    }, LIVE_UPDATE_DEBOUNCE_MS);
+  });
+
+  textFontSelect.addEventListener('change', async () => {
+    log.append('cmd', 'Police texte', textFontSelect.value);
+    try {
+      const res = await postRemote({ textFont: textFontSelect.value });
+      logRemoteResult('POST police texte', res);
+    } catch (e) {
+      const m = e && e.message ? e.message : String(e);
+      log.append('err', 'POST police texte', m);
+      statusLine.textContent = m;
+    }
   });
 
   textLiveUpdateCheck.addEventListener('change', () => {

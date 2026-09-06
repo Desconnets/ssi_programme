@@ -21,7 +21,7 @@ import {
 } from './phases.js';
 import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
-import { updateTextContent } from './text-phase.js';
+import { updateTextContent, updateTextStyle } from './text-phase.js';
 
 const ENDPOINT = '/api/phase-remote';
 
@@ -65,6 +65,9 @@ export function startPhaseRemotePolling() {
   let lastAppliedVideoMuted = null;
   /** Last text applied to the DOM (independent of phase restarts). */
   let lastAppliedTextContent = null;
+  /** Last text color/font applied to the DOM (independent of phase restarts). */
+  let lastAppliedTextColor = null;
+  let lastAppliedTextFont = null;
   /** @type {AbortController | null} */
   let abortCtl = null;
   let timeoutId = 0;
@@ -101,6 +104,15 @@ export function startPhaseRemotePolling() {
         if (newTextContent !== lastAppliedTextContent) {
           lastAppliedTextContent = newTextContent;
           updateTextContent(newTextContent);
+        }
+
+        /* Same idea for color/font: applied live, independent of phase restarts. */
+        const newTextColor = typeof data.textColor === 'string' ? data.textColor : '';
+        const newTextFont = typeof data.textFont === 'string' ? data.textFont : '';
+        if (newTextColor !== lastAppliedTextColor || newTextFont !== lastAppliedTextFont) {
+          lastAppliedTextColor = newTextColor;
+          lastAppliedTextFont = newTextFont;
+          updateTextStyle(newTextColor, newTextFont);
         }
       }
 

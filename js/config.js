@@ -52,6 +52,23 @@ export const PHASE_REMOTE_IDLE_RESUME_MS = 60000;
 /** Text phase duration */
 export const TEXT_PHASE_DURATION_MS = 20000;
 
+/** Text phase — default color when the operator hasn't picked one (POST textColor null/empty). */
+export const TEXT_COLOR_DEFAULT = '#ffffff';
+
+/**
+ * Text phase — font presets selectable from the remote panel. Ids must stay in sync
+ * with TEXT_FONT_IDS in ssi_server/phase_remote_state.py (server only validates the id,
+ * this map is the single source of truth for the label + actual CSS font stack).
+ */
+export const TEXT_FONT_PRESETS = {
+  comic: { label: 'Comic (défaut)', css: '"Comic Sans MS", "Trebuchet MS", Tahoma, sans-serif' },
+  mono: { label: 'Monospace', css: '"Courier New", Courier, monospace' },
+  hand: { label: 'Manuscrite', css: '"Chalkboard SE", "Bradley Hand", cursive' },
+  system: { label: 'Système', css: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif' },
+  serif: { label: 'Serif', css: 'Georgia, "Times New Roman", serif' },
+};
+export const TEXT_FONT_DEFAULT = 'comic';
+
 /**
  * Clip phase — manual trigger only (never in the auto cycle), full-frame video with
  * audio active, no sticker / title overlay. Plays until the video's natural end (or
