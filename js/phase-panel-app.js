@@ -23,7 +23,7 @@ const FALLBACK_PANEL_PHASES = [
   { id: 'os_video', label: 'Fenêtre vidéo', needsVideoIndex: true, hint: '' },
   { id: 'logo', label: 'Logo', needsVideoIndex: false, hint: '' },
   { id: 'webcam', label: 'Webcam', needsVideoIndex: false, hint: '' },
-  { id: "text", label: "Texte", needsVideoIndex: false, hint: "" },
+  { id: "text", label: "Texte", needsVideoIndex: false, manualOnly: true, hint: "" },
   { id: 'clip', label: 'Clip (avec son)', needsVideoIndex: false, needsClipIndex: true, manualOnly: true, hint: '' },
 ];
 

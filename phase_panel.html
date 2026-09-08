@@ -377,6 +377,7 @@
 
       <section class="panel-section" aria-labelledby="lbl-actions">
         <h2 id="lbl-actions">Actions</h2>
+        <!-- HERE WILL BE PUT THE ACTION BUTTONS -->
         <div id="panelActions"></div>
          <div class="panel-field" style="margin-top: 0.5rem">
             <label for="text-editor">Message (phase Texte)</label>
@@ -404,17 +405,7 @@
           </div>
       </section>
 
-      <section class="panel-section" aria-labelledby="lbl-idle">
-        <h2 id="lbl-idle">Reprise auto (boucle snake)</h2>
-        <p class="panel-field-hint">Sans nouvelle commande phase ou fond : après ce délai, la scène reprend le cycle standard.</p>
-        <div class="panel-field">
-          <label for="panelIdleResumeSec">Délai (secondes)</label>
-          <div class="panel-row">
-            <input type="number" id="panelIdleResumeSec" min="3" max="900" step="1" value="60" aria-label="Secondes avant reprise auto" />
-            <button type="button" class="secondary" id="btnPanelIdleResumeApply">Appliquer</button>
-          </div>
-        </div>
-      </section>
+
 
       <section class="panel-section" aria-labelledby="lbl-video">
         <h2 id="lbl-video">Vidéo (phase fenêtre OS)</h2>
@@ -464,6 +455,18 @@
           </label>
           <div class="panel-toolbar panel-toolbar--tight">
             <button type="button" id="btnPanelBgApply">Appliquer le fond</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel-section" aria-labelledby="lbl-idle">
+        <h2 id="lbl-idle">Reprise auto (boucle snake)</h2>
+        <p class="panel-field-hint">Sans nouvelle commande phase ou fond : après ce délai, la scène reprend le cycle standard.</p>
+        <div class="panel-field">
+          <label for="panelIdleResumeSec">Délai (secondes)</label>
+          <div class="panel-row">
+            <input type="number" id="panelIdleResumeSec" min="3" max="900" step="1" value="60" aria-label="Secondes avant reprise auto" />
+            <button type="button" class="secondary" id="btnPanelIdleResumeApply">Appliquer</button>
           </div>
         </div>
       </section>

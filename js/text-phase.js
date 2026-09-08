@@ -1,8 +1,7 @@
-import { TEXT_PHASE_DURATION_MS, SMOOTH_SCALE, SMOOTH_ROTATE } from "./config.js";
+import { SMOOTH_SCALE, SMOOTH_ROTATE } from "./config.js";
 import { onPhaseEnded } from "./phase-manager.js";
 import { lerp } from "./utils.js";
 
-let textPhaseTimer = null;
 let layerEl = null;
 let contentEl = null;
 
@@ -73,13 +72,12 @@ export function applyTextPulse(levels, t) {
   content.style.transform = `translateY(${floatY}px) scale(${smoothScale}) rotate(${smoothRotate}deg)`;
 }
 
-// Public: call from remote command or cycle
-export function startTextPhase(text, durationMs, callback) {
+// Public: call from remote command (manual only — see phase-manager.js PHASE_ORDER)
+export function startTextPhase(text) {
   const resolved = text ?? '';
   if (resolved.trim() === '') {
-    /* Nothing to display (e.g. the auto cycle reaches Text before the operator has
-       set any message) — skip immediately instead of leaving a blank screen for the
-       full phase duration. Same "nothing to show" pattern as the video window phase. */
+    /* Nothing to display (no message configured yet) — skip immediately instead of
+       leaving a blank screen up. Same "nothing to show" pattern as the video window phase. */
     onPhaseEnded();
     return;
   }
@@ -88,11 +86,8 @@ export function startTextPhase(text, durationMs, callback) {
   content.innerHTML = textContent;
   fitTextToLayer(content, layer);
   layer.classList.add('ssi-text-phase-layer--open');
-  const dur = durationMs ?? TEXT_PHASE_DURATION_MS;
-  textPhaseTimer = setTimeout(() => {
-    closeTextPhase(callback); // or wherever in cycle
-    onPhaseEnded();
-  }, dur);
+  /* Manual only: stays up until another phase is started (interruptAllPhases calls
+     closeTextPhase()) — no auto-advance timeout. */
 }
 
 if (typeof window !== 'undefined') {
@@ -103,14 +98,11 @@ if (typeof window !== 'undefined') {
   });
 }
 
-export function closeTextPhase(callback) {
+export function closeTextPhase() {
   const { layer, content } = getElements();
   layer.classList.remove('ssi-text-phase-layer--open');
   if (content) {
     content.dataset.smoothScale = '1';
     content.dataset.smoothRotate = '0';
   }
-  clearTimeout(textPhaseTimer);
-  textPhaseTimer = null;
-  if (callback) callback();
 }
