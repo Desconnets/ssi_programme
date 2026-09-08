@@ -12,14 +12,13 @@ import {
 } from './config.js';
 import {
   forceIdleResumeStandardCycle,
-  interruptAllPhases,
   initStickers,
   initPhaseVideos,
   setOsWindowMinLoopMs,
   setPhasePaused,
   setOsWindowVideoMuted,
 } from './phases.js';
-import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode } from './phase-manager.js';
+import { setPhaseAutoAdvance, startPhase, setEnabledPhases, setPhaseSelectMode, PHASE_ORDER } from './phase-manager.js';
 import { applyRemoteBackgroundState, reloadBackgrounds } from './background-playback.js';
 import { updateTextContent, updateTextStyle } from './text-phase.js';
 
@@ -55,7 +54,7 @@ export function startPhaseRemotePolling() {
   let lastAppliedContentSet = null;
   /** État pause phases appliqué sur la page scène. */
   let lastAppliedPaused = null;
-  /** État du mode manuel/auto */
+    /** État du mode manuel/auto */
   let lastAppliedAutoAdvance = null;
   /** État de la liste phases actives */
   let lastAppliedEnabledPhases = null;
@@ -149,6 +148,7 @@ export function startPhaseRemotePolling() {
         setPhaseSelectMode(selectMode);
       }
 
+
       /* Mood visuel (classique / dark) + content set — calculer les changements AVANT de mettre à jour */
       const newTheme = typeof data.theme === 'string' ? data.theme : 'classique';
       const newContentSet = typeof data.contentSet === 'string' ? data.contentSet : '';
@@ -187,8 +187,11 @@ export function startPhaseRemotePolling() {
         const stale = Date.now() - ts > idleMs;
         if (stale && idleFiredForLastCommandMs !== ts) {
           idleFiredForLastCommandMs = ts;
-          /* Ne pas relancer le cycle si les phases sont en pause ou si on est en mode manuel */
-          if (!data.phasesPaused && data.phaseAutoAdvance !== false) {
+          /* Ne pas relancer le cycle si les phases sont en pause, si on est en mode manuel,
+             ou si la phase courante est manuelle uniquement (Texte / Clip, absentes de
+             PHASE_ORDER) : ces phases restent affichées jusqu'à un changement explicite,
+             elles n'expirent pas par idle-resume. */
+          if (!data.phasesPaused && data.phaseAutoAdvance !== false && PHASE_ORDER.includes(data.phase)) {
             forceIdleResumeStandardCycle();
           }
         }

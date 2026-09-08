@@ -12,7 +12,7 @@ Pour étendre (nouvelle phase, nouveau réglage) :
 
 Phases reconnues : VALID_PHASES + PANEL_PHASE_ORDER + PANEL_PHASE_LABELS.
 Moods reconnus   : VALID_MOODS (classique / dark).
-Content sets     : n'importe quel sous-dossier détecté dans stickers/, phase_videos/, backgrounds/.
+Content sets     : n'importe quel sous-dossier de content/{mood}/ (boom, jeux-video, …).
 
 Thread-safety : toutes les lectures/écritures des variables _privées passent par _lock.
 """
@@ -70,10 +70,10 @@ VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam', '
 
 # Phases proposées par la sélection automatique (séquentielle ou aléatoire).
 # Désactiver une phase ne l'empêche pas d'être déclenchée manuellement.
-# "clip" is deliberately excluded: manual-only phase (see dedicated user story),
-# never picked by the auto cycle — even if a client tries to add it to enabledPhases
-# (rejected in post_remote_payload below).
-AUTO_ADVANCE_PHASES: frozenset[str] = VALID_PHASES - frozenset({'clip'})
+# "clip" and "text" are deliberately excluded: manual-only phases, never picked by
+# the auto cycle — even if a client tries to add them to enabledPhases (rejected in
+# post_remote_payload below).
+AUTO_ADVANCE_PHASES: frozenset[str] = VALID_PHASES - frozenset({'clip', 'text'})
 _enabled_phases: set[str] = set(AUTO_ADVANCE_PHASES)
 
 VALID_PHASE_SELECT_MODES = frozenset({'sequential', 'random'})
@@ -85,8 +85,8 @@ PANEL_PHASE_ORDER: tuple[str, ...] = (
     'super_boom',
     'os_video',
     'logo',
-    'text',
     'webcam',
+    'text',
     'clip',
 )
 
@@ -153,7 +153,7 @@ def _phase_video_list_ttl_sec() -> float:
 def get_cached_phase_video_filenames() -> list[str]:
     """
     Chemins relatifs dans phase_videos/ selon le mood + content set actifs (TTL court, thread-safe).
-    Priorité : phase_videos/{content_set}/ → phase_videos/{mood}/ → phase_videos/
+    Priorité : content/{mood}/{catégorie}/videos/ → pool mood → phase_videos/
     """
     from .config import VIDEO_EXT
     from .fsutil import list_content_files
@@ -177,7 +177,7 @@ def get_cached_phase_video_filenames() -> list[str]:
 def get_cached_background_filenames() -> list[str]:
     """
     Chemins relatifs dans backgrounds/ selon le mood + content set actifs (TTL court, thread-safe).
-    Priorité : backgrounds/{content_set}/ → backgrounds/{mood}/ → backgrounds/
+    Priorité : content/{mood}/{catégorie}/backgrounds/ → pool mood → backgrounds/
     """
     from .config import VIDEO_EXT
     from .fsutil import list_content_files
@@ -303,6 +303,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
         and not has_bg_auto and not has_bg_index and not has_theme \
         and not has_pause and not has_video_muted and not has_content_set and not has_auto_advance
+    
 
     with _lock:
         if has_phase:
@@ -375,7 +376,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
             if invalid:
                 raise ValueError(
                     f'enabledPhases invalide(s): {sorted(invalid)} (attendu: {sorted(AUTO_ADVANCE_PHASES)} — '
-                    "« clip » est manuel uniquement, jamais dans le cycle auto)"
+                    "« clip » et « text » sont manuelles uniquement, jamais dans le cycle auto)"
                 )
             if not cleaned:
                 raise ValueError('enabledPhases ne peut pas être vide (au moins une phase active)')

@@ -89,7 +89,7 @@
 
 | Fichier | Rôle | Modifier pour… |
 |---------|------|----------------|
-| `index.html` | Page scène (16:9). Contient les calques DOM : fond, stickers, fenêtres OS/webcam, overlay CRT, hint démarrage. | Ajouter un nouveau calque DOM (nouvelle phase) |
+| `index.html` | Page scène (16:9). Calques : fond, stickers, fenêtres OS/webcam, overlay REC, CRT, hint. | Ajouter un nouveau calque DOM (nouvelle phase) |
 | `phase_panel.html` | Télécommande web. Sections : Thème, Actions (phases), Reprise auto, Vidéo, Fond, Journal. | Ajouter une section de contrôle |
 
 ---
@@ -121,13 +121,11 @@
 content/
   logos/classique/        ← logos SSI (toujours inclus dans les stickers classique)
   logos/dark/             ← logos dark/techno
-  classique/stickers/     boom/  jeux-video/  pop-culture/  doux/  [urban/]
-  classique/videos/       boom/  jeux-video/  pop-culture/
-  classique/backgrounds/  boom/  doux/  urban/  jeux-video/  pop-culture/
-  dark/                   (mêmes sous-dossiers, fichiers _techno glitchés)
+  classique/{catégorie}/  stickers/  videos/  backgrounds/
+  dark/{catégorie}/       stickers/  videos/  backgrounds/
 ```
 
-**Ajouter une catégorie** : créer le sous-dossier dans `content/classique/{type}/ma-categorie/` et `content/dark/{type}/ma-categorie/`. Bouton auto dans la télécommande.
+**Ajouter une catégorie** : créer `content/classique/ma-categorie/stickers/` (et `videos/`, `backgrounds/`). Le bouton s’appelle `ma-categorie`. Optionnel : le même dossier sous `content/dark/`.
 
 **Ajouter un mood** : créer `content/nouveau-mood/`, ajouter `[data-app-theme="nouveau-mood"]` dans `style.css`, ajouter dans `VALID_MOODS` (`phase_remote_state.py`), bouton dans `phase_panel.html`.
 
