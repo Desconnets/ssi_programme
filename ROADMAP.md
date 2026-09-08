@@ -57,15 +57,24 @@
 
 | # | Étape | Statut | Notes |
 |---|-------|--------|-------|
-| C1 | Architecture `content/` | ✅ | `content/{mood}/{type}/{set}/` + `content/logos/` |
+| C1 | Architecture `content/` | ✅ | `content/{mood}/{catégorie}/{type}/` + `content/logos/` |
 | C2 | Moods classique/dark | ✅ | Remplacent ssi/diagonal. CSS `[data-app-theme="dark"]` |
 | C3 | 5 catégories de contenu | ✅ | boom / jeux-video / pop-culture / urban / doux |
 | C4 | Contenu _techno dark | ✅ | Versions glitchées de tous les stickers et vidéos classique |
 | C5 | Télécommande dynamique | ✅ | Boutons mood + content sets auto-détectés |
 | C6 | `fsutil.list_content_files()` | ✅ | Chargement 3 niveaux + logos toujours inclus |
 | C7 | Conversion dans `content/` | ✅ | `_convert_content_dir()` dans `phase_video_convert.py` |
-| C8 | Fix rechargement mood | ✅ | Flag calculé avant mise à jour état dans `phase-remote.js` |
+| C8 | Fix rechargement mood | ✅ | Flag calculé avant mise à jour d'état dans `phase-remote.js` |
 | C9 | Fix boom+vidéo simultanés | ✅ | `animateStickersOut(callback)` dans `phases.js` |
+
+## Étapes septembre 2026 — Catégorie d’abord + webcam
+
+| # | Étape | Statut | Notes |
+|---|-------|--------|-------|
+| S1 | Catégorie d’abord | ✅ | `content/{mood}/{cat}/stickers\|videos\|backgrounds/` — bouton = nom du dossier |
+| S2 | Conversion + inventaire | ✅ | `_convert_content_dir` et `live_report` suivent le nouvel arbre |
+| S3 | Luminosité webcam | ✅ | `webcamBrightness` (slider télécommande, filtre CSS) |
+| S4 | Overlay REC caméscope | ✅ | `webcamRecOverlay` + timecode pendant la phase webcam |
 
 ## Prochaines étapes possibles (optionnel)
 

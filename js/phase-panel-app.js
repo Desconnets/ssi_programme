@@ -269,13 +269,13 @@ async function bootstrap() {
     !btnThemeSsi ||
     !btnThemeDiagonal ||
     !btnPausePhases ||
-    !btnAutoAdvanceAuto ||
-    !btnAutoAdvanceManual ||
     !videoMutedCheck ||
     !panelContentSets ||
-    !btnContentSetNone ||
+    !btnAutoAdvanceAuto ||
+    !btnAutoAdvanceManual ||
     !btnPhaseSelectModeSeq ||
     !btnPhaseSelectModeRandom ||
+    !btnContentSetNone ||
     !textEditor ||
     !btnUpdateTextContent ||
     !textLiveUpdateCheck
@@ -379,7 +379,7 @@ async function bootstrap() {
       const isRandom = j.phaseSelectMode === 'random';
       btnPhaseSelectModeSeq.classList.toggle('active', !isRandom);
       btnPhaseSelectModeRandom.classList.toggle('active', isRandom);
-  
+
       bgAuto.checked = Boolean(j.backgroundAutoRotate);
       const nBg = bgFiles.length;
       if (!j.backgroundAutoRotate && j.backgroundVideoIndex != null && nBg > 0) {
@@ -399,6 +399,7 @@ async function bootstrap() {
       const m = e && e.message ? e.message : String(e);
       log.append('err', 'GET /api/phase-remote', m);
       statusLine.textContent = m;
+      //renderPhaseButtons(actionsEl, FALLBACK_PANEL_PHASES, runPhase);
       renderPhaseButtons(actionsEl, phases, runPhase, new Set(Array.isArray(j.enabledPhases) ? j.enabledPhases : phases.map((p) => p.id)), onToggleEnabled)
     }
   };
@@ -580,7 +581,7 @@ async function bootstrap() {
     }
   });
 
-  const sendAutoAdvance = async (next) => {
+   const sendAutoAdvance = async (next) => {
     log.append('cmd', next ? 'Mode auto' : 'Mode manuel');
     try {
       const res = await postRemote({ phaseAutoAdvance: next });

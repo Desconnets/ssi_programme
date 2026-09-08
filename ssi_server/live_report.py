@@ -6,35 +6,31 @@ from .logutil import info, warn, sep
 
 
 def _count_content_files(media_type: str, exts: frozenset) -> int:
-    """Compte tous les fichiers d'un type dans content/ (tous moods + logos)."""
+    """Compte tous les fichiers d'un type dans content/{mood}/{catégorie}/{type}/."""
     total = 0
     content_dir = 'content'
     if not os.path.isdir(content_dir):
         return 0
     for mood in os.listdir(content_dir):
         mood_path = os.path.join(content_dir, mood)
-        if not os.path.isdir(mood_path):
+        if not os.path.isdir(mood_path) or mood.startswith('_') or mood == 'logos':
             continue
-        type_path = os.path.join(mood_path, media_type)
-        if not os.path.isdir(type_path):
+        try:
+            cats = os.listdir(mood_path)
+        except OSError:
             continue
-        # Fichiers directs
-        try:
-            for f in os.listdir(type_path):
-                if os.path.splitext(f)[1].lower() in exts:
-                    total += 1
-        except OSError:
-            pass
-        # Fichiers dans les sous-dossiers content set
-        try:
-            for sub in os.listdir(type_path):
-                sub_path = os.path.join(type_path, sub)
-                if os.path.isdir(sub_path) and not sub.startswith('_'):
-                    for f in os.listdir(sub_path):
-                        if os.path.splitext(f)[1].lower() in exts:
-                            total += 1
-        except OSError:
-            pass
+        for cat in cats:
+            if cat.startswith('_'):
+                continue
+            type_path = os.path.join(mood_path, cat, media_type)
+            if not os.path.isdir(type_path):
+                continue
+            try:
+                for f in os.listdir(type_path):
+                    if os.path.splitext(f)[1].lower() in exts:
+                        total += 1
+            except OSError:
+                pass
     # Logos comptés séparément pour les stickers
     if media_type == 'stickers':
         logos_dir = os.path.join('content', 'logos')

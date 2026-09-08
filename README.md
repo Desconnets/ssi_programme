@@ -49,6 +49,16 @@ SNAKE (~30 s × 3 tours) → SUPER BOOM (~10 s) → FENÊTRE VIDÉO → LOGO (~2
 
 ---
 
+## Ce qu'on a fait — septembre 2026
+
+**Catégories d’abord :** `content/{mood}/{catégorie}/stickers|videos|backgrounds/`. Le bouton télécommande a le nom du dossier et charge cette bibliothèque seule. « Racine » = tout le mood.
+
+**Webcam :** slider de luminosité + overlay REC (point clignotant, timecode) depuis la télécommande.
+
+Journal : `CHANGELOG.md` · plan : `ROADMAP.md`.
+
+---
+
 ## Ce qu'on a fait — juin 2026
 
 J'ai refait l'organisation complète des médias et du système de sélection de contenu.
@@ -57,25 +67,32 @@ J'ai refait l'organisation complète des médias et du système de sélection de
 
 ```
 content/
-  logos/classique/     SSI-logo*.gif
-  logos/dark/          SSI-logo*_techno.gif
-  classique/
-    stickers/  boom/  jeux-video/  pop-culture/  doux/
-    videos/    boom/  jeux-video/  pop-culture/
-    backgrounds/  boom/  doux/  urban/  jeux-video/  pop-culture/
-  dark/
-    (mêmes catégories avec fichiers _techno glitchés)
+  logos/
+    classique/     SSI-logo*.gif
+    dark/          SSI-logo*_techno.gif
+  classique/                    ← mood
+    boom/                       ← catégorie = bouton télécommande
+      stickers/
+      videos/
+      backgrounds/
+    jeux-video/
+      stickers/  videos/  backgrounds/
+    pop-culture/
+    doux/
+    urban/
+  dark/                         ← même catégories, fichiers _techno
+    boom/  jeux-video/  pop-culture/  doux/  urban/
 ```
 
 ### Moods et catégories
 **2 moods** : ☀ Classique (SSI) / ⚡ Dark (glitché, électrique)  
-**5 catégories** : boom · jeux-video · pop-culture · urban · doux
+**Catégories** : tout sous-dossier de `content/classique/` ou `content/dark/` (aujourd’hui boom · jeux-video · pop-culture · urban · doux)
 
 ### Comment étendre facilement
 
-**Ajouter un mood** : créer `content/nouveau-mood/stickers/`, `content/nouveau-mood/videos/`, `content/nouveau-mood/backgrounds/`, ajouter ses règles CSS `[data-app-theme="nouveau-mood"]`, mettre à jour `VALID_MOODS` dans `phase_remote_state.py`.
+**Ajouter un mood** : créer `content/nouveau-mood/ma-categorie/stickers|videos|backgrounds/`, ajouter ses règles CSS `[data-app-theme="nouveau-mood"]`, mettre à jour `VALID_MOODS` dans `phase_remote_state.py`.
 
-**Ajouter une catégorie** : créer le sous-dossier dans `content/classique/stickers/ma-categorie/` et `content/dark/...`. Le bouton apparaît automatiquement dans la télécommande, aucun code à toucher.
+**Ajouter une catégorie** : créer `content/classique/ma-categorie/` (et éventuellement `content/dark/ma-categorie/`) avec `stickers/`, `videos/`, `backgrounds/` dedans. Le bouton porte le nom du dossier. Aucun code à toucher.
 
 **Ajouter du contenu** : déposer des fichiers dans le bon dossier, relancer le serveur. Les `.mov`, `.gif` sont convertis automatiquement.
 
