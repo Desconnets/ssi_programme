@@ -47,7 +47,7 @@ export const PHASE_REMOTE_POLL_MS_HIDDEN = 2200;
  * Reprise auto boucle si le GET ne fournit pas `idleResumeMs` (serveur ancien) ou valeur invalide.
  * Sinon la durée vient de `POST /api/phase-remote` → `idleResumeMs` (réglable dans le panneau web).
  */
-export const PHASE_REMOTE_IDLE_RESUME_MS = 60000;
+export const PHASE_REMOTE_IDLE_RESUME_MS = 99_999_999_000;
 
 
 /** Text phase — default color when the operator hasn't picked one (POST textColor null/empty). */

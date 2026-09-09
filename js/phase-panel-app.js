@@ -355,7 +355,7 @@ async function bootstrap() {
       const ir = Number(j.idleResumeMs);
       if (Number.isFinite(ir) && ir > 0) {
         const sec = Math.round(ir / 1000);
-        idleResumeSec.value = String(Math.max(3, Math.min(900, sec)));
+        idleResumeSec.value = String(Math.max(3, Math.min(99999999, sec)));
       }
 
       /* Sync case muet vidéo */
@@ -664,7 +664,7 @@ async function bootstrap() {
   btnIdleResumeApply.addEventListener('click', async () => {
     let sec = parseInt(idleResumeSec.value, 10);
     if (!Number.isFinite(sec)) sec = 60;
-    sec = Math.max(3, Math.min(900, sec));
+    sec = Math.max(3, Math.min(99999999, sec));
     idleResumeSec.value = String(sec);
     const ms = sec * 1000;
     log.append('cmd', 'Reprise auto boucle', `${sec} s (${ms} ms)`);
