@@ -1465,7 +1465,7 @@ export function startClipPhase(opts = {}) {
   const gen = clipGeneration;
 
   /* Audio always active here — independent from the "videoMuted" setting (phase_videos). */
-  clipVideo.muted = false;
+  clipVideo.muted = true;
   clipVideo.defaultMuted = false;
   clipVideo.volume = 1;
   try {
@@ -1505,6 +1505,7 @@ export function startClipPhase(opts = {}) {
       () => gen !== clipGeneration,
       () => {
         if (gen !== clipGeneration) return;
+        clipVideo.muted = false;
         debugLog('[PHASE·CLIP] Lecture démarrée —', liveShortName(url));
       },
       (err) => {
