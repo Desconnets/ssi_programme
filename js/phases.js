@@ -866,6 +866,11 @@ export function interruptAllPhases(done) {
 
   clearWebcamTimers();
   clearOsWindowTimers();
+  if (snakeTimer) {
+    clearTimeout(snakeTimer);
+    snakeTimer = null;
+  }
+  snakeCyclesDone = 0;
 
   closeTextPhase();
 
