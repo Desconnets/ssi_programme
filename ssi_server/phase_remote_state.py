@@ -66,6 +66,14 @@ _phases_paused: bool = False
 # Son des vidéos phase_videos/ — muet par défaut, activable depuis la télécommande
 _video_muted: bool = True
 
+# Webcam : luminosité (filtre CSS brightness) — 1.0 = normale
+_webcam_brightness: float = 1.0
+_WEBCAM_BRIGHTNESS_MIN = 0.2
+_WEBCAM_BRIGHTNESS_MAX = 3.0
+
+# Webcam : overlay « REC caméscope » — activé par défaut
+_webcam_rec_overlay: bool = True
+
 VALID_PHASES = frozenset({'snake', 'super_boom', 'os_video', 'logo', 'webcam', 'text', 'clip'})
 
 # Phases proposées par la sélection automatique (séquentielle ou aléatoire).
@@ -241,6 +249,8 @@ def _snapshot_unlocked() -> dict[str, Any]:
         'textContent': _text_content,
         'textColor': _text_color,
         'textFont': _text_font,
+        'webcamBrightness': _webcam_brightness,
+        'webcamRecOverlay': _webcam_rec_overlay,
     }
 
 
@@ -268,6 +278,7 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     global _bg_gradient_opacity, _bg_auto_rotate, _bg_forced_video_index, _idle_resume_ms, _theme, _phases_paused, _video_muted, _content_set, _phases_auto_advance
     global _enabled_phases, _phase_select_mode
     global _text_content, _text_color, _text_font
+    global _webcam_brightness, _webcam_rec_overlay
 
     if not isinstance(data, dict):
         raise ValueError('corps JSON objet attendu')
@@ -288,21 +299,25 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
     has_text = 'textContent' in data
     has_text_color = 'textColor' in data
     has_text_font = 'textFont' in data
+    has_webcam_brightness = 'webcamBrightness' in data
+    has_webcam_rec_overlay = 'webcamRecOverlay' in data
 
     if not has_phase and not has_bg_opacity and not has_bg_auto and not has_bg_index \
             and not has_idle_resume and not has_theme and not has_pause \
             and not has_auto_advance and not has_enabled_phases and not has_select_mode \
             and not has_text and not has_text_color and not has_text_font \
+            and not has_webcam_brightness and not has_webcam_rec_overlay \
             and not has_video_muted and not has_content_set:
         raise ValueError(
             'aucun champ reconnu : phase, bgGradientOpacity, backgroundAutoRotate, enabledPhases, phaseSelectMode'
             'backgroundVideoIndex, idleResumeMs, theme, pausePhases, phaseAutoAdvance, videoMuted, contentSet, '
-            'textContent, textColor, textFont'
+            'textContent, textColor, textFont', 'webcamBrightness, webcamRecOverlay'
         )
 
     idle_only = has_idle_resume and not has_phase and not has_bg_opacity \
         and not has_bg_auto and not has_bg_index and not has_theme \
-        and not has_pause and not has_video_muted and not has_content_set and not has_auto_advance
+        and not has_pause and not has_video_muted and not has_content_set and not has_auto_advance \
+        and not has_webcam_brightness and not has_webcam_rec_overlay
     
 
     with _lock:
@@ -427,6 +442,16 @@ def post_remote_payload(data: dict[str, Any]) -> dict[str, Any]:
                 _content_set = cs
                 _pv_list_cache = None
                 _bg_list_cache = None
+
+        if has_webcam_brightness:
+            try:
+                bv = float(data.get('webcamBrightness', 1.0))
+            except (TypeError, ValueError) as e:
+                raise ValueError('webcamBrightness doit être un nombre (ex. 1.0)') from e
+            _webcam_brightness = max(_WEBCAM_BRIGHTNESS_MIN, min(_WEBCAM_BRIGHTNESS_MAX, bv))
+
+        if has_webcam_rec_overlay:
+            _webcam_rec_overlay = bool(data.get('webcamRecOverlay'))
 
         if not idle_only:
             _seq += 1
