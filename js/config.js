@@ -38,6 +38,8 @@ export const SNAKE_STICKER_LIFETIME_MS = 10000;
  * est préchargée dans un `<video>` caché avant la fenêtre OS. Augmenter = plus de marge réseau/décode.
  */
 export const SUPER_BOOM_DURATION_MS = 10000;
+/** Super boom — nombre max de stickers affichés (tirés aléatoirement parmi tous les stickers). -1 = pas de limite (tous). */
+export const SUPER_BOOM_MAX_STICKERS = 25;
 
 /** Télécommande phases (`/api/phase-remote`) : intervalle de lecture (ms). */
 export const PHASE_REMOTE_POLL_MS = 450;

@@ -28,6 +28,7 @@ import {
   SNAKE_SEGMENT_DELAY_MS,
   SNAKE_STICKER_LIFETIME_MS,
   SUPER_BOOM_DURATION_MS,
+  SUPER_BOOM_MAX_STICKERS,
   LOGO_PHASE_DURATION_MS,
   OS_WINDOW_PHASE_MAX_MS,
   OS_WINDOW_MAX_WIDTH_RATIO,
@@ -592,9 +593,13 @@ export function startSuperBoom() {
   /* Libère le serveur Python : plus de fetch warm en parallèle quand la vidéo va être demandée */
   abortBrowserMediaWarm();
 
-  reportLiveEvent('super_boom', { nombre: allStickerUrls.length });
+  const shuffledStickerUrls = shuffleInPlace(allStickerUrls.slice());
+  const boomStickerUrls =
+    SUPER_BOOM_MAX_STICKERS < 0 ? shuffledStickerUrls : shuffledStickerUrls.slice(0, SUPER_BOOM_MAX_STICKERS);
 
-  allStickerUrls.forEach((url, idx) => {
+  reportLiveEvent('super_boom', { nombre: boomStickerUrls.length });
+
+  boomStickerUrls.forEach((url, idx) => {
     const img = document.createElement('img');
     img.className = 'sticker sticker-visible sticker-in-pop';
     bindStickerImage(img, url);
