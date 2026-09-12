@@ -870,7 +870,7 @@ html.ssi-app-init-pending #startHint {
 }
 
 [data-app-theme="dark"] .ssi-os-titlebar {
-  background: #ffc8e8;
+  background: hsl(325, 98%, 48%);
   border-bottom: 1.5px solid #000;
 }
 
@@ -878,7 +878,7 @@ html.ssi-app-init-pending #startHint {
 [data-app-theme="dark"] .ssi-os-dot--r,
 [data-app-theme="dark"] .ssi-os-dot--y,
 [data-app-theme="dark"] .ssi-os-dot--g {
-  background: #ffb0d8;
+  background: hsl(325, 98%, 40%);
   border: 1.5px solid #000;
   box-shadow: none;
 }
@@ -891,7 +891,7 @@ html.ssi-app-init-pending #startHint {
 }
 
 [data-app-theme="dark"] #ssiOsWindowLayer .ssi-os-title::after {
-  content: '★  La BOUM de Samuel !  ★';
+  content: '★  GLITCH WORLD  ★';
   position: absolute;
   inset: 0;
   display: flex;
@@ -906,7 +906,7 @@ html.ssi-app-init-pending #startHint {
 }
 
 [data-app-theme="dark"] #ssiWebcamPhaseLayer .ssi-os-title::after {
-  content: '★  La BOUM de Samuel !  ★';
+  content: '★  GLITCH WORLD  ★';
   position: absolute;
   inset: 0;
   display: flex;
